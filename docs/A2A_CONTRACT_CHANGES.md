@@ -15,7 +15,7 @@
 
 | | |
 |---|---|
-| **status** | 🟡 **제안** — MaintQ·FinAllQ 확인 대기 |
+| **status** | 🟢 **채택** (2026-08-21) — 스키마 5종의 PROPOSED 마커 제거 완료. MaintQ·FinAllQ 쪽 구현 확인은 각 레포 자체 진행 |
 | **제안자** | InsuQ |
 | **제안일** | 2026-08-19 |
 | **원본 조사** | `InsuQ/docs/A2A_API_SPEC.md` §0 |

@@ -21,7 +21,7 @@
       "status": { "type": "string", "enum": ["completed", "rejected"] },
       "rejection_reason": {
         "type": "string",
-        "description": "PROPOSED(InsuQ, 2026-08-19): status=rejected 일 때 필수. 거부는 장애가 아니므로 HTTP 200 으로 내려간다.",
+        "description": "status=rejected 일 때 필수. 거부는 장애가 아니므로 HTTP 200 으로 내려간다.",
         "enum": ["no_evidence_found", "citation_unverified", "out_of_corpus", "policy_not_found"]
       },
       "policy_valid": { "type": "boolean" },
@@ -34,7 +34,7 @@
       "sufficient": { "type": "boolean", "description": "coverage_amount >= required_coverage 여부" },
       "evidence": {
         "type": "array",
-        "description": "PROPOSED(InsuQ, 2026-08-19): 인용 형식 고정. `{상품명} {policy_part} {article_no}[ {clause_no}][, p.{page}]` — policy_part 생략 금지(파트 간 조 번호가 충돌해, 조 번호만 대조하면 다른 파트의 같은 조 번호를 지어내도 환각 탐지를 통과한다).",
+        "description": "인용 형식 고정. `{상품명} {policy_part} {article_no}[ {clause_no}][, p.{page}]` — policy_part 생략 금지(파트 간 조 번호가 충돌해, 조 번호만 대조하면 다른 파트의 같은 조 번호를 지어내도 환각 탐지를 통과한다).",
         "items": { "type": "string", "pattern": "^.+ .+ 제\\d+조( [①-⑳\\d]+항?)?(, p\\.\\d+)?$" }
       }
     }
