@@ -197,17 +197,18 @@ MaintQ 직접 호출로만 허용된다.
    BLD-E를 대조군으로 확보하는 쪽으로 진행한다. 실제 충돌이 아니라 각자 자기 쪽에서
    해결 가능한 문제였다.
 
-## 여전히 남아있는 미결 사항 (FinAllQ 조사가 그대로 넘긴 것)
+## 미결 사항 재정리 (2026-08-21) — 해결됨 3건 · 보류 2건
 
-FinAllQ 조사 §5의 "QMesh 설계 시 답해야 할 질문"을 그대로 인용한다 — QMesh 쪽 결정이
-필요하다:
+FinAllQ 조사 §5의 "QMesh 설계 시 답해야 할 질문"을 그대로 인용한다. 5건 중 3건(①②③)은
+이미 본문에 결론이 있었고, 2건(④⑤)은 원문에도 "FinAllQ 구현 시 결정"이라 명시돼 있어
+QMesh가 지금 대신 정할 수 없다 — 그 구분을 아래에 라벨로 명확히 한다:
 
-1. **MaintQ는 자기 회사 건만 요청하나, 제3자 대리를 하나?** → actor/subject가 항상
-   같은지, 달라질 수 있는지에 따라 위임 테이블 설계가 갈린다. **S8·S13(FinAllQ가
+1. ✅ **해결됨 — MaintQ는 자기 회사 건만 요청하나, 제3자 대리를 하나?** actor/subject가
+   항상 같은지, 달라질 수 있는지에 따라 위임 테이블 설계가 갈린다. **S8·S13(FinAllQ가
    InsuQ를 2차 홉으로 부르는 경우)은 이미 actor≠subject의 실제 사례로 확인됐다**(위
    "인증/인가 분리 모델" 참조). 다만 MaintQ가 직접 호출하는 나머지 스킬(S5·S6·S7·
    S11·S12·S14·S16)은 여전히 actor=subject로 가정한다 — 대리 시나리오는 아직 없다.
-2. **파트너 자격증명 발급 주체와 연결 절차 — 확정 (2026-08-13)**
+2. ✅ **해결됨 — 파트너 자격증명 발급 주체와 연결 절차** (확정 2026-08-13)
 
    **결론: FinAllQ ADMIN 콘솔이 발급 주체가 맞다.** QMesh는 신뢰의 근원이 아니라
    프로토콜 중계자로 남는다 — README의 "QMesh는 각 프로젝트 내부를 모르는 블랙박스"
@@ -281,21 +282,22 @@ FinAllQ 조사 §5의 "QMesh 설계 시 답해야 할 질문"을 그대로 인�
    엮인다. 부수적으로 #130이 ADMIN 등록 폼과 담당자 초대 화면 두 사용자를 섞고
    있다는 지적도 남겼다 — 착수 시점에 놓치면 안 되는 것.
 
-3. **"대출심사"(assess-loan 등)의 결과는 조언인가 실행인가?** → `request-withdrawal`·
+3. ✅ **해결됨 — "대출심사"(assess-loan 등)의 결과는 조언인가 실행인가?** `request-withdrawal`·
    `request-settlement`는 명시적으로 `input-required`를 거치므로 실행이 아니다.
    `assess-loan`·`assess-used-equipment-loan`은 "심사 결과"이지 여신 실행 자체가
    아니므로, 이체 결재 라인(`ApprovalPolicy`)과는 별개 — 대출 실행이 필요해지면
    그건 별도로 `request-withdrawal`을 다시 태워야 한다는 뜻. **이 관계를 스키마
    `response.decision`(approved/conditional/rejected)에 "심사 결과일 뿐, 실행 아님"
    주석으로 이미 반영해뒀다.**
-4. **출금 요청은 기존 이체 파이프라인(FDS→결재→잔액차감)을 타나, 별도 경로인가?**
-   → 타야 한다면 `transfer_request.requester_user_id` NOT NULL 제약과 충돌한다
-   (외부 요청에는 요청자 user가 없다). **미해결 — FinAllQ 구현 시 결정.** 후보:
+4. ⏸ **FinAllQ 구현 착수 시 결정 (QMesh 비차단) — 출금 요청은 기존 이체 파이프라인
+   (FDS→결재→잔액차감)을 타나, 별도 경로인가?** 타야 한다면
+   `transfer_request.requester_user_id` NOT NULL 제약과 충돌한다(외부 요청에는 요청자
+   user가 없다). 후보:
    파트너를 서비스 계정 user row로 만들되 `principal_type` 구분 컬럼을 둬서
    `ApprovalPolicy`가 머신 주체를 사람으로 오인하지 않게 한다(FinAllQ 조사 §2.6 말미).
-5. **감사 로그에 외부 actor를 어떻게 남기나?** → 현재 `audit_log.actor_user_id`는
-   사람 user를 전제한다. 4번과 같은 해법(서비스 계정 + `principal_type`)이면 자연히
-   해결된다. **미해결 — FinAllQ 구현 시 결정.**
+5. ⏸ **FinAllQ 구현 착수 시 결정 (QMesh 비차단) — 감사 로그에 외부 actor를 어떻게
+   남기나?** 현재 `audit_log.actor_user_id`는 사람 user를 전제한다. 4번과 같은 해법
+   (서비스 계정 + `principal_type`)이면 자연히 해결된다.
 
 ## MaintQ 구현 세부 결정 (2026-08-13, MaintQ 자체 조사)
 
