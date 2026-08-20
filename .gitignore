@@ -3,7 +3,6 @@
 # ==========================================
 
 # Visualizer & Draft HTML files (다듬은 후 포함 예정)
-*.html
 
 # Backup & Scratch Files
 README__.md

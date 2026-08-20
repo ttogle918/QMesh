@@ -1,0 +1,804 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FinAllQ — 시나리오 & 구현 현황 지도</title>
+<style>
+  :root {
+    --bg: #F2F4F7; --bg-panel: #FFFFFF; --bg-sunken: #E8EBEF;
+    --ink: #161A21; --ink-dim: #545F6E; --ink-faint: #838EA0;
+    --border: #DBE0E7; --border-soft: #E9ECF1; --border-strong: #B7C0CC;
+    --plate: #FBFCFD; --plate-edge: #D5DBE3;
+    --maintq: #B5651D; --maintq-soft: #FBEEDF; --maintq-ink: #7A4413;
+    --finallq: #0F7B6C; --finallq-soft: #E1F5EE; --finallq-ink: #095A4E;
+    --insuq: #6B4FA0; --insuq-soft: #EFEAFB; --insuq-ink: #4B3573;
+    --st-done: #1957C2; --st-done-soft: #E4ECFA; --st-done-ink: #0F3E90;
+    --st-progress: #1D8A5C; --st-progress-soft: #E2F3EA; --st-progress-ink: #12603F;
+    --st-todo: #C2790F; --st-todo-soft: #FBEEDA; --st-todo-ink: #855109;
+    --st-critical: #C0362E;
+    --font-display: -apple-system, "Apple SD Gothic Neo", "Segoe UI", "Malgun Gothic", Pretendard, Roboto, sans-serif;
+    --font-mono: ui-monospace, "Cascadia Mono", "D2Coding", Consolas, "Segoe UI Mono", monospace;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0F131A; --bg-panel: #161B23; --bg-sunken: #10141B;
+      --ink: #E8ECF2; --ink-dim: #9AA5B4; --ink-faint: #6B7688;
+      --border: #262E3A; --border-soft: #1E2530; --border-strong: #384356;
+      --plate: #F4F7FA; --plate-edge: #2E3744;
+      --maintq-soft: #3A2A16; --maintq-ink: #E8A868;
+      --finallq-soft: #113A33; --finallq-ink: #6FD3BE;
+      --insuq-soft: #2A2140; --insuq-ink: #B9A4E8;
+      --st-done-soft: #17273F; --st-done-ink: #8FB6EF;
+      --st-progress-soft: #123526; --st-progress-ink: #7BD3A8;
+      --st-todo-soft: #3A2A0F; --st-todo-ink: #F0B75E;
+      --st-critical: #F0736A;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font-display); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 40px 24px 100px; }
+  :focus-visible { outline: 2px solid var(--finallq); outline-offset: 2px; border-radius: 3px; }
+
+  header.top { display: flex; flex-wrap: wrap; gap: 20px 32px; align-items: flex-end; justify-content: space-between; padding-bottom: 26px; border-bottom: 1px solid var(--border); margin-bottom: 22px; }
+  .eyebrow { font-family: var(--font-mono); font-size: 12.5px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--finallq-ink); font-weight: 600; margin: 0 0 8px; }
+  header.top h1 { font-size: clamp(24px, 3.2vw, 32px); margin: 0 0 9px; font-weight: 750; letter-spacing: -0.01em; text-wrap: balance; }
+  header.top .lede { margin: 0; color: var(--ink-dim); font-size: 15px; max-width: 68ch; }
+  .asof { text-align: right; font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-faint); }
+  .asof b { display: block; color: var(--ink); font-size: 13.5px; font-weight: 600; }
+
+  .status-legend { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 11px; padding: 13px 18px; margin-bottom: 30px; font-size: 13px; color: var(--ink-dim); }
+  .status-legend b { font-size: 12px; font-family: var(--font-mono); color: var(--ink-faint); letter-spacing: 0.06em; text-transform: uppercase; }
+  .status-legend .sw { display: inline-flex; align-items: center; gap: 7px; }
+  .status-legend .dot { width: 16px; height: 16px; border-radius: 50%; display: inline-block; border: 2px solid transparent; flex: none; }
+  .dot.done { background: var(--st-done-soft); border-color: var(--st-done); }
+  .dot.progress { background: var(--st-progress-soft); border-color: var(--st-progress); }
+  .dot.todo { background: var(--st-todo-soft); border-color: var(--st-todo); }
+  .dot.critical { background: var(--st-todo-soft); border-color: var(--st-critical); border-width: 2.5px; }
+
+  .toc { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 11px; padding: 14px 18px; margin-bottom: 42px; display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; }
+  .toc b { font-size: 12.5px; font-family: var(--font-mono); color: var(--ink-faint); letter-spacing: 0.06em; text-transform: uppercase; }
+  .toc a { font-size: 13.5px; color: var(--finallq-ink); text-decoration: none; border-bottom: 1px solid transparent; }
+  .toc a:hover { border-bottom-color: currentColor; }
+
+  section.slide { margin-bottom: 60px; scroll-margin-top: 20px; }
+  .sec-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 10px; }
+  .sec-head h2 { font-size: 21px; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
+  .sec-head .count { font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); }
+  .sec-note { color: var(--ink-dim); font-size: 14px; margin: 0 0 18px; max-width: 82ch; }
+
+  .plate { background: var(--plate); border: 1px solid var(--plate-edge); border-radius: 11px; padding: 20px 16px; overflow-x: auto; }
+
+  .tooltip { position: fixed; z-index: 50; max-width: 340px; background: var(--ink); color: var(--bg); font-size: 13px; line-height: 1.5; padding: 12px 14px; border-radius: 9px; pointer-events: none; opacity: 0; transition: opacity 0.12s ease; box-shadow: 0 8px 24px rgba(0,0,0,0.28); }
+  .tooltip.show { opacity: 1; }
+  .tooltip .tt-head { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .tooltip b { font-size: 13px; color: #FFD9A8; font-family: var(--font-mono); letter-spacing: 0.02em; }
+  .tooltip .tt-status { font-size: 10.5px; font-weight: 700; padding: 1.5px 7px; border-radius: 100px; font-family: var(--font-mono); }
+  .tooltip .tt-status.done { background: #1D3A66; color: #A9CBFA; }
+  .tooltip .tt-status.progress { background: #123F2C; color: #8FE0B9; }
+  .tooltip .tt-status.todo { background: #4A3410; color: #F5C877; }
+  .tooltip .tt-status.critical { background: #4A1512; color: #FF9B92; }
+
+  .chip-node { cursor: pointer; }
+  .chip-node:focus circle.core, .chip-node.hl circle.core { filter: brightness(0.95); }
+
+  term { border-bottom: 1px dashed var(--ink-faint); cursor: help; }
+  term:hover, term:focus { border-bottom-color: var(--finallq-ink); color: var(--finallq-ink); }
+
+  .flow { display: flex; flex-direction: column; gap: 10px; }
+  .flow-row { display: flex; align-items: center; flex-wrap: wrap; gap: 0; }
+  .flow-row.branch { margin-left: 40px; }
+  .fbox { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 9px; padding: 10px 14px; font-size: 13.5px; min-width: 120px; text-align: center; }
+  .fbox b { display: block; font-size: 13.5px; font-weight: 650; }
+  .fbox span { display: block; font-size: 11.5px; color: var(--ink-faint); margin-top: 2px; }
+  .farrow { color: var(--ink-faint); font-size: 15px; padding: 0 8px; flex: none; }
+  .fbranch-tag { font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint); margin-right: 6px; white-space: nowrap; }
+
+  .subhead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 14.5px; font-weight: 650; margin: 26px 0 10px; color: var(--ink); }
+  .subhead:first-child { margin-top: 4px; }
+
+  .badge-row { display: inline-flex; align-items: center; gap: 6px; }
+  .badge-row .brlabel { font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint); margin-right: 2px; font-weight: 500; }
+  .scn-badge { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; font-family: var(--font-mono); font-size: 11px; font-weight: 700; cursor: pointer; border: 2px solid transparent; transition: transform 0.08s ease; flex: none; }
+  .scn-badge:hover, .scn-badge:focus, .scn-badge.hl { transform: scale(1.12); }
+  .scn-badge.st-done { background: var(--st-done-soft); color: var(--st-done-ink); border-color: var(--st-done); }
+  .scn-badge.st-progress { background: var(--st-progress-soft); color: var(--st-progress-ink); border-color: var(--st-progress); }
+  .scn-badge.st-todo { background: var(--st-todo-soft); color: var(--st-todo-ink); border-color: var(--st-todo); }
+  .scn-badge.important { border-color: var(--st-critical); border-width: 3px; }
+
+  .connect-note { border-left: 3px solid var(--finallq); background: var(--finallq-soft); padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 13px; margin-top: 14px; color: var(--ink); }
+  .connect-note b { color: var(--finallq-ink); font-weight: 680; }
+
+  .repo-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .repo-badge { font-family: var(--font-mono); font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 6px; }
+  .repo-badge.maintq { background: var(--maintq-soft); color: var(--maintq-ink); }
+  .repo-badge.finallq { background: var(--finallq-soft); color: var(--finallq-ink); }
+  .repo-badge.insuq { background: var(--insuq-soft); color: var(--insuq-ink); }
+
+  .board { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 11px; padding: 18px 16px; overflow-x: auto; }
+  .statgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 11px; overflow: hidden; }
+  .statbox { background: var(--bg-panel); padding: 14px 16px; }
+  .statbox b { display: block; font-family: var(--font-mono); font-size: 23px; font-weight: 700; letter-spacing: -0.02em; color: var(--st-done-ink); }
+  .statbox span { display: block; font-size: 11.5px; color: var(--ink-faint); margin-top: 2px; }
+  .statbox.crit b { color: var(--st-critical); }
+
+  .prog-list { display: flex; flex-direction: column; gap: 9px; min-width: 620px; }
+  .prog-row { display: grid; grid-template-columns: 68px minmax(180px, 1.4fr) minmax(120px, 1fr) auto; align-items: center; gap: 12px; font-size: 13px; }
+  .prog-row.sep { border-top: 1px dashed var(--border-strong); padding-top: 13px; margin-top: 5px; }
+  .prog-id { font-family: var(--font-mono); font-size: 11px; font-weight: 700; text-align: center; padding: 3px 0; border-radius: 6px; border: 1.5px solid transparent; }
+  .prog-id.done { background: var(--st-done-soft); color: var(--st-done-ink); border-color: var(--st-done); }
+  .prog-id.prog { background: var(--st-progress-soft); color: var(--st-progress-ink); border-color: var(--st-progress); }
+  .prog-id.todo { background: var(--st-todo-soft); color: var(--st-todo-ink); border-color: var(--st-todo); }
+  .prog-id.crit { background: var(--st-todo-soft); color: var(--st-todo-ink); border-color: var(--st-critical); border-width: 2.5px; }
+  .prog-name { color: var(--ink); }
+  .prog-bar { display: flex; height: 9px; border-radius: 100px; overflow: hidden; background: var(--bg-sunken); }
+  .prog-bar i { display: block; height: 100%; }
+  .prog-bar i.done { background: var(--st-done); }
+  .prog-bar i.todo { background: var(--border-strong); }
+  .prog-pct { font-size: 11.5px; color: var(--ink-dim); white-space: nowrap; font-family: var(--font-mono); }
+  .prog-pct em { font-style: normal; color: var(--ink-faint); }
+
+  .figcap { font-size: 12.5px; color: var(--ink-dim); margin: 12px 4px 0; max-width: 86ch; line-height: 1.6; }
+  .figcap b { color: var(--ink); }
+
+  .techgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 11px; margin-top: 12px; }
+  .tech { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; padding: 13px 15px; }
+  .tech .tk { display: inline-block; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--finallq-ink); background: var(--finallq-soft); padding: 2px 7px; border-radius: 5px; margin-bottom: 7px; }
+  .tech b { display: block; font-size: 13.5px; margin-bottom: 5px; }
+  .tech p { margin: 0; font-size: 12.5px; color: var(--ink-dim); line-height: 1.58; }
+  .tech code { font-family: var(--font-mono); font-size: 0.9em; background: var(--bg-sunken); padding: 1px 4px; border-radius: 3px; color: var(--ink); }
+
+  .glossary { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+  .gterm { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 9px; padding: 12px 14px; }
+  .gterm b { display: block; font-size: 13.5px; margin-bottom: 3px; }
+  .gterm p { margin: 0; font-size: 12.5px; color: var(--ink-dim); }
+
+  footer { margin-top: 54px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12.5px; color: var(--ink-faint); display: flex; flex-wrap: wrap; gap: 8px 22px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <p class="eyebrow">Q 시리즈 · FinAllQ 전용 지도</p>
+      <h1>FinAllQ 시나리오 & 구현 현황 지도</h1>
+      <p class="lede">돈이 오가는 요청과 상담을 처리하는 은행·증권 파트 <b>FinAllQ</b>의 독립 단독 페이지입니다.
+      <br>🟢 <b>세 프로젝트 중 가장 많이 구현되었습니다 (Sprint 1~14 완료, Sprint 15 진행 중)</b> — 내부 흐름(온보딩, 이체, FDS, AI비서, 자산리포트, 여신심사)은 <b>1,300개 이상 자동 테스트</b>로 검증되어 있으며, <b>59개 REST 엔드포인트 · 31개 화면 · 20개 에이전트 툴</b>이 구축되어 있습니다. 바깥으로 난 A2A 창구(Agent Card · :9001 포트)만 얹으면 경계 시나리오(S5·S6·S8 등)를 즉시 수용할 수 있습니다.
+      <br>🟡 <b>2026-08-20 갱신</b> — 여신 심사에 자동거절 이력(Sprint 14)과 심사 근거(한도·담보·LTV) 화면(Sprint 15, 진행 중)이 추가돼 S8·S13의 "도메인 완비" 주장이 더 튼튼해졌습니다. 반대로 기업 온보딩(126~130)은 이미 완료였지만 <b>파트너 자격증명·머신 신원(131·132)은 여전히 미착수</b>라는 게 이번에 <code>A2A_IDENTITY.md</code> 재조사로 재확인됐습니다 — 아래 §① 연결되는 지점을 참고하세요.</p>
+    </div>
+    <div class="asof">기준 시점<b>2026-08-20</b><span style="display:block;font-size:11px;margin-top:3px">FinAllQ Sprint 14 완료 · Sprint 15 Stage 1 완료 반영</span></div>
+  </header>
+
+  <div class="status-legend">
+    <b>구현 상태</b>
+    <span class="sw"><span class="dot done"></span>구현됨</span>
+    <span class="sw"><span class="dot progress"></span>구현 중</span>
+    <span class="sw"><span class="dot todo"></span>아직 시작 안 함</span>
+    <span class="sw"><span class="dot critical"></span>아직 시작 안 함 + 중요한 시나리오</span>
+  </div>
+
+  <nav class="toc">
+    <b>바로가기</b>
+    <a href="#finallq">① FinAllQ 내부 흐름도</a>
+    <a href="#status">② FinAllQ 구현 현황</a>
+    <a href="#comm">③ 세 프로젝트 통신 다이어그램</a>
+    <a href="#glossary">④ 용어 사전</a>
+  </nav>
+
+  <!-- ================= ① FinAllQ 흐름도 ================= -->
+  <section class="slide" id="finallq">
+    <div class="sec-head"><h2>① FinAllQ 안에서 벌어지는 일</h2><span class="count">내부 S19~S23 · 경계 S5 · S6 · S8 · S12 · S13 · S15 · S16</span></div>
+    <p class="sec-note">돈이 오가는 요청과 상담을 처리하는 은행·증권 파트입니다. MaintQ에서 오는 요청은 전부 여기서 <term data-tip="Fraud Detection System. 이상한 거래(사기·오류일 가능성)를 자동으로 걸러내는 장치.">이상거래 탐지(FDS)</term>를 한 번 거칩니다.
+    <br><b>🟢 세 프로젝트 중 가장 많이 만들어진 곳입니다</b> — 아래 S19~S23은 <b>이미 도는 내부 흐름</b>이고, 경계를 넘는 S5·S6·S8은 이 위에 <term data-tip="다른 회사 AI가 요청을 보낼 수 있게 열어두는 창구. 명함(Agent Card)과 전용 포트(:9001)로 이뤄집니다.">A2A 창구</term>만 얹으면 됩니다.</p>
+
+    <div class="repo-head"><span class="repo-badge finallq">FinAllQ</span><span style="font-size:13px;color:var(--ink-dim)">은행 · 증권 담당자가 쓰는 화면</span></div>
+
+    <div class="subhead">
+      🟢 기업 고객을 처음 받을 때 <span style="font-weight:500;color:var(--ink-faint);font-size:12.5px">— 이게 없으면 회사는 "사람 0명"인 빈 껍데기였다</span>
+      <span class="badge-row" data-badges="S19"><span class="brlabel">관련 시나리오</span></span>
+    </div>
+    <div class="plate">
+      <div class="flow">
+        <div class="flow-row">
+          <div class="fbox"><b>기업 등록</b><span>사업자번호 확인</span></div>
+          <span class="farrow">▶</span>
+          <div class="fbox"><b>앵커 초대 발급</b><span>은행이 첫 결재자를 지정</span></div>
+          <span class="farrow">▶</span>
+          <div class="fbox"><b>초대 수락</b><span>비밀번호 설정 → 계정 생성</span></div>
+          <span class="farrow">▶</span>
+          <div class="fbox"><b>직원 초대</b><span>이제 회사가 스스로 늘어난다</span></div>
+        </div>
+        <div class="flow-row branch">
+          <span class="fbranch-tag">🔴 여기가 막혀 있었다</span>
+          <div class="fbox" style="min-width:260px"><b>발급 권한을 가진 첫 사람을 만들 방법이 없었다</b><span>초대하려면 발급자가 있어야 하는데, 그 발급자를 만들 경로가 없었다</span></div>
+        </div>
+        <div class="flow-row branch">
+          <span class="fbranch-tag">발급자가 1명뿐이면</span>
+          <div class="fbox" style="min-width:200px"><b>권한 회수를 막는다</b><span>회사가 통째로 잠기는 것 방지</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subhead">
+      🟢 돈이 나가는 전체 흐름 <span style="font-weight:500;color:var(--ink-faint);font-size:12.5px">— S5가 도착하면 타는 레일</span>
+      <span class="badge-row" data-badges="S20,S21"><span class="brlabel">관련 시나리오</span></span>
+    </div>
+    <div class="plate">
+      <div class="flow">
+        <div class="flow-row">
+          <div class="fbox"><b>이체 요청</b><span>계좌 소유·한도 검사</span></div>
+          <span class="farrow">▶</span>
+          <div class="fbox"><b>누가 결재하나 판정</b><span>개인=본인 / 기업=MANAGER</span></div>
+          <span class="farrow">▶</span>
+          <div class="fbox"><b>규칙 관문</b><span>1회·1일 한도</span></div>
+          <span class="farrow">▶</span>
+          <div class="fbox"><b>이상거래 탐지</b><span>모델 판정</span></div>
+          <span class="farrow">▶</span>
+          <div class="fbox"><b>실행 · 잔액 차감</b></div>
+        </div>
+        <div class="flow-row branch">
+          <span class="fbranch-tag">자기가 올린 요청이면</span>
+          <div class="fbox" style="min-width:180px"><b>본인 결재 금지</b><span>기업 모드 한정</span></div>
+        </div>
+        <div class="flow-row branch">
+          <span class="fbranch-tag">시스템 관리자여도</span>
+          <div class="fbox" style="min-width:180px"><b>결재자가 아니다</b><span>권한이 세다고 돈을 못 움직인다</span></div>
+        </div>
+        <div class="flow-row branch">
+          <span class="fbranch-tag">다른 회사 소속이면</span>
+          <div class="fbox" style="min-width:200px"><b>"권한 없음"이 아니라 "안 보임"</b><span>리소스 존재 자체를 숨긴다</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subhead">
+      🟢 말로 물어볼 때
+      <span class="badge-row" data-badges="S22,S23"><span class="brlabel">관련 시나리오</span></span>
+    </div>
+    <div class="plate">
+      <div class="flow">
+        <div class="flow-row">
+          <div class="fbox"><b>자연어 질문</b><span>"내 자산 어때?"</span></div>
+          <span class="farrow">▶</span>
+          <div class="fbox"><b>어떤 기능을 부를지 결정</b><span>🔴 LLM 아님 · 규칙 기반</span></div>
+          <span class="farrow">▶</span>
+          <div class="fbox"><b>기능 여러 개 실행</b><span>툴 20종</span></div>
+          <span class="farrow">▶</span>
+          <div class="fbox"><b>답 조립 + 근거 패널</b><span>무엇을 어떤 순서로 불렀는지 노출</span></div>
+        </div>
+        <div class="flow-row branch">
+          <span class="fbranch-tag">일부 기능이 죽으면</span>
+          <div class="fbox" style="min-width:220px"><b>빠진 것을 숨기지 않고 표시</b><span>조용히 사라지면 사용자가 모른다</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subhead" style="margin-top:34px">
+      경계를 넘는 요청 — 여기부터는 아직 창구가 없다
+      <span class="badge-row" data-badges="A2A"><span class="brlabel">가로막는 것</span></span>
+    </div>
+
+    <div class="subhead">
+      돈이 실제로 움직이는 요청
+      <span class="badge-row" data-badges="S5,S12"><span class="brlabel">관련 시나리오</span></span>
+    </div>
+    <div class="plate">
+      <div class="flow">
+        <div class="flow-row">
+          <div class="fbox"><b>요청 접수</b><span>MaintQ에서 옴</span></div>
+          <span class="farrow">▶</span>
+          <div class="fbox"><b>이상거래 탐지 (FDS)</b><span>수상하면 여기서 걸러짐</span></div>
+          <span class="farrow">▶</span>
+          <div class="fbox"><b>재무 담당 승인</b><span>사람이 두 번째로 확인</span></div>
+          <span class="farrow">▶</span>
+          <div class="fbox"><b>실행 또는 거절</b></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subhead">
+      상담만 하는 요청
+      <span class="badge-row" data-badges="S6,S16"><span class="brlabel">관련 시나리오</span></span>
+    </div>
+    <div class="plate">
+      <div class="flow">
+        <div class="flow-row">
+          <div class="fbox"><b>상담 요청 접수</b></div>
+          <span class="farrow">▶</span>
+          <div class="fbox"><b>비용 · 위험 분석</b></div>
+          <span class="farrow">▶</span>
+          <div class="fbox"><b>방안 비교표 작성</b></div>
+          <span class="farrow">▶</span>
+          <div class="fbox"><b>회신만 하고 끝</b><span>실제 거래는 안 함</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subhead">
+      대출 심사 <span style="font-weight:500;color:var(--st-done-ink);font-size:12.5px">— Sprint 12 API 4종 → Sprint 14 거절 이력 → Sprint 15 심사 근거 화면(진행 중)</span>
+      <span class="badge-row" data-badges="S8,S13"><span class="brlabel">관련 시나리오</span></span>
+    </div>
+    <div class="plate">
+      <div class="flow">
+        <div class="flow-row">
+          <div class="fbox"><b>담보대출 요청</b><span>신용평가 · 대출한도 산정</span></div>
+          <span class="farrow">▶</span>
+          <div class="fbox"><b>담보 가치 평가</b><span>LTV · 담보가액 산정</span></div>
+          <span class="farrow">▶</span>
+          <div class="fbox"><b>보험 유효성 검증<br>(InsuQ 멀티홉 연계)</b><span>2차 홉 조회 대기</span></div>
+          <span class="farrow">▶</span>
+          <div class="fbox"><b>심사 결정</b><span>승인 / 자동거절 / 사람 거절</span></div>
+        </div>
+        <div class="flow-row branch">
+          <span class="fbranch-tag">Sprint 12 성과</span>
+          <div class="fbox" style="min-width:260px"><b>여신 심사 핵심 API 4종 구축</b><span>한도(규칙①)·LTV(규칙②) 자동 판정 도메인 완비</span></div>
+        </div>
+        <div class="flow-row branch">
+          <span class="fbranch-tag">Sprint 14 성과</span>
+          <div class="fbox" style="min-width:260px"><b>자동거절도 이력이 된다</b><span>거절 시 행 저장(201) + 사유코드/메모, 자기결재 사전 차단</span></div>
+        </div>
+        <div class="flow-row branch">
+          <span class="fbranch-tag">Sprint 15 진행 중</span>
+          <div class="fbox" style="min-width:280px"><b>심사자가 근거를 보고 결정한다</b><span>승인/거절 화면에 한도·담보·LTV 실데이터 카드 표시(신규 데이터 0 — 재구성만)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connect-note"><b>연결되는 지점</b> S5·S12의 "요청 접수"는 통신 다이어그램의 MaintQ↔FinAllQ 선에서 오는 요청이 그대로 들어오는 자리입니다. S8·S13의 두 번째 다리(InsuQ에 물어보는 부분)가 통신 다이어그램의 FinAllQ↔InsuQ 선입니다. S15는 InsuQ가 먼저 시작해서 여기로 상담이 넘어오는 반대 방향입니다.
+    <br><br><b>🔑 중요한 관찰</b> — S5가 도착하면 타야 할 레일(<b>S20 결재 흐름 + S21 이상거래 탐지 + 감사 로그</b>)과 S8의 <b>여신 심사 도메인(Sprint 12)</b>은 <b>이미 다 깔려 있습니다.</b> 빠진 것은 흐름이 아니라 <b>바깥으로 난 문</b>(Agent Card · :9001)입니다. S6·S16(상담)은 그 문 뒤에 붙일 <b>분석 로직이 아직 없고</b>, S8·S13(멀티홉)은 InsuQ 쪽 상대 창구와 함께 있어야 완전한 릴레이가 성립합니다.</div>
+  </section>
+
+  <!-- ================= ② FinAllQ 구현 현황 ================= -->
+  <section class="slide" id="status">
+    <div class="sec-head"><h2>② FinAllQ 구현 현황</h2><span class="count">Sprint 1~14 완료 · Sprint 15 Stage 1 완료 · 2026-08-20 실측</span></div>
+    <p class="sec-note">세 프로젝트 중 <b>가장 많이 만들어진 곳</b>입니다. <b>59개 엔드포인트와 1,300개 이상 테스트</b>로 내부 코어와 AI 비서 오케스트레이션이 완벽히 가동 중입니다. 다만 <b>"많이 만든 것"과 "A2A로 쓸 수 있는 것"은 다릅니다</b> — 안쪽 흐름은 도는데 바깥으로 난 창구가 아직 없습니다. 아래에서 그 구분을 그림으로 보여줍니다.</p>
+
+    <div class="statgrid">
+      <div class="statbox"><b>14</b><span>완료 스프린트 <span style="font-size:10px">(15는 Stage 1 완료, 진행 중)</span></span></div>
+      <div class="statbox"><b>59</b><span>REST 엔드포인트 <span style="font-size:10px">(초대·기업등록 포함)</span></span></div>
+      <div class="statbox"><b>31</b><span>실제 화면 <span style="font-size:10px">(React 19)</span></span></div>
+      <div class="statbox"><b>20</b><span>에이전트 툴 <span style="font-size:10px">(전수 화면 연결 완료)</span></span></div>
+      <div class="statbox"><b>1,300+</b><span>자동 테스트 <span style="font-size:10px">(백엔드 831·프론트 391 실측)</span></span></div>
+      <div class="statbox"><b>20</b><span>DB 테이블 <span style="font-size:10px">(여신 3종 포함)</span></span></div>
+      <div class="statbox crit"><b>0</b><span>A2A 창구</span></div>
+    </div>
+
+    <div class="subhead" style="margin-top:30px">시나리오별 진행도 — FinAllQ가 관여하는 것만</div>
+    <div class="board">
+      <div class="prog-list">
+        <div class="prog-row"><span class="prog-id done">S19</span><span class="prog-name">기업 온보딩 (등록→앵커→초대 4단계 완결)</span><span class="prog-bar"><i class="done" style="width:100%"></i></span><span class="prog-pct">구현됨 <em>· 실측 31 PASS</em></span></div>
+        <div class="prog-row"><span class="prog-id done">S20</span><span class="prog-name">이체 요청 → 결재 → 실행 (18칸 매트릭스)</span><span class="prog-bar"><i class="done" style="width:100%"></i></span><span class="prog-pct">구현됨 <em>· 직무 분리 통제</em></span></div>
+        <div class="prog-row"><span class="prog-id done">S21</span><span class="prog-name">이상거래 탐지 · 경보 (규칙→FDS 2중 방어)</span><span class="prog-bar"><i class="done" style="width:88%"></i><i class="todo" style="width:12%"></i></span><span class="prog-pct">구현됨 <em>· 모델은 난수 학습</em></span></div>
+        <div class="prog-row"><span class="prog-id done">S22</span><span class="prog-name">AI 비서 오케스트레이션 (툴 20종 · 근거 패널)</span><span class="prog-bar"><i class="done" style="width:100%"></i></span><span class="prog-pct">구현됨 <em>· 툴 미연결 0건</em></span></div>
+        <div class="prog-row"><span class="prog-id prog">S23</span><span class="prog-name">통합 자산 · 리포트</span><span class="prog-bar"><i class="done" style="width:70%"></i><i class="todo" style="width:30%"></i></span><span class="prog-pct">계산 O <em>· 데이터가 합성</em></span></div>
+        <div class="prog-row sep"><span class="prog-id prog">S5</span><span class="prog-name">출금 요청 (2단 승인) — MaintQ→FinAllQ</span><span class="prog-bar"><i class="done" style="width:75%"></i><i class="todo" style="width:25%"></i></span><span class="prog-pct">레일 완비 <em>· 창구 없음</em></span></div>
+        <div class="prog-row"><span class="prog-id prog">S8</span><span class="prog-name">담보-보험 검증 (여신 심사 도메인 + 거절 이력 + 근거 화면)</span><span class="prog-bar"><i class="done" style="width:62%"></i><i class="todo" style="width:38%"></i></span><span class="prog-pct">S12·S14 완료·S15 진행 <em>· A2A 대기</em></span></div>
+        <div class="prog-row"><span class="prog-id todo">S6</span><span class="prog-name">환헤지 · 자금운용 상담</span><span class="prog-bar"><i class="done" style="width:15%"></i><i class="todo" style="width:85%"></i></span><span class="prog-pct">미착수 <em>· 분석 로직 없음</em></span></div>
+        <div class="prog-row"><span class="prog-id todo">S12·S16</span><span class="prog-name">매각대금 정산 · 자금조달 비교</span><span class="prog-bar"><i class="done" style="width:8%"></i><i class="todo" style="width:92%"></i></span><span class="prog-pct">미착수</span></div>
+      </div>
+    </div>
+
+    <div class="subhead">🔴 무엇이 있고 무엇이 없는가 — S5를 예로</div>
+    <div class="board">
+      <svg viewBox="0 0 960 320" width="100%" role="img" aria-label="S5 출금요청 시나리오에서 FinAllQ가 이미 갖춘 부분과 없는 부분을 비교한 그림. 요청 접수 창구인 Agent Card와 9001 포트만 없고, 그 뒤의 결재 라인, 이상거래 탐지, 감사 로그, 잔액 차감은 모두 구현되어 있다.">
+        <defs>
+          <marker id="sar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)"/>
+          </marker>
+          <marker id="sar-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--st-done)"/>
+          </marker>
+        </defs>
+        <g font-family="var(--font-display)" font-size="12">
+          <rect x="14" y="118" width="128" height="62" rx="10" fill="var(--maintq-soft)" stroke="var(--maintq)" stroke-width="1.3"/>
+          <text x="78" y="143" text-anchor="middle" font-size="13" font-weight="700" fill="var(--maintq-ink)">MaintQ</text>
+          <text x="78" y="161" text-anchor="middle" font-size="10.5" fill="var(--maintq-ink)">팀장 승인 완료</text>
+
+          <rect x="196" y="104" width="150" height="90" rx="10" fill="var(--st-todo-soft)" stroke="var(--st-critical)" stroke-width="2.6" stroke-dasharray="7 4"/>
+          <text x="271" y="130" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--st-critical)">A2A 창구</text>
+          <text x="271" y="149" text-anchor="middle" font-size="10.5" fill="var(--st-todo-ink)">Agent Card</text>
+          <text x="271" y="165" text-anchor="middle" font-size="10.5" fill="var(--st-todo-ink)">:9001 얼굴 포트</text>
+          <text x="271" y="183" text-anchor="middle" font-size="11" font-weight="700" fill="var(--st-critical)">← 이것만 없다</text>
+          <line x1="144" y1="149" x2="194" y2="149" stroke="var(--ink-faint)" stroke-width="1.4" marker-end="url(#sar)"/>
+
+          <text x="655" y="36" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--st-done)">이 뒤는 전부 이미 돈다 — S20 · S21이 그것</text>
+          <rect x="392" y="46" width="552" height="248" rx="12" fill="none" stroke="var(--st-done)" stroke-width="1.4" stroke-dasharray="5 4" opacity="0.55"/>
+
+          <rect x="414" y="72" width="146" height="56" rx="9" fill="var(--st-done-soft)" stroke="var(--st-done)" stroke-width="1.4"/>
+          <text x="487" y="94" text-anchor="middle" font-size="12" font-weight="650" fill="var(--st-done-ink)">요청 접수</text>
+          <text x="487" y="112" text-anchor="middle" font-size="10" fill="var(--st-done-ink)">계좌 소유 · 한도</text>
+
+          <rect x="414" y="146" width="146" height="56" rx="9" fill="var(--st-done-soft)" stroke="var(--st-done)" stroke-width="1.4"/>
+          <text x="487" y="168" text-anchor="middle" font-size="12" font-weight="650" fill="var(--st-done-ink)">결재자 판정</text>
+          <text x="487" y="186" text-anchor="middle" font-size="10" fill="var(--st-done-ink)">고객 유형 스위치</text>
+
+          <rect x="414" y="220" width="146" height="56" rx="9" fill="var(--st-done-soft)" stroke="var(--st-done)" stroke-width="1.4"/>
+          <text x="487" y="242" text-anchor="middle" font-size="12" font-weight="650" fill="var(--st-done-ink)">이상거래 탐지</text>
+          <text x="487" y="260" text-anchor="middle" font-size="10" fill="var(--st-done-ink)">규칙 → 모델</text>
+
+          <line x1="348" y1="149" x2="412" y2="100" stroke="var(--st-done)" stroke-width="1.4" marker-end="url(#sar-ok)"/>
+          <line x1="562" y1="100" x2="600" y2="100" stroke="var(--st-done)" stroke-width="1.3" marker-end="url(#sar-ok)"/>
+          <line x1="562" y1="174" x2="600" y2="174" stroke="var(--st-done)" stroke-width="1.3" marker-end="url(#sar-ok)"/>
+          <line x1="562" y1="248" x2="600" y2="248" stroke="var(--st-done)" stroke-width="1.3" marker-end="url(#sar-ok)"/>
+
+          <rect x="602" y="72" width="160" height="56" rx="9" fill="var(--bg-panel)" stroke="var(--border-strong)" stroke-width="1.2"/>
+          <text x="682" y="94" text-anchor="middle" font-size="11.5" fill="var(--ink)">사람의 두 번째 승인</text>
+          <text x="682" y="112" text-anchor="middle" font-size="10" fill="var(--ink-faint)">기업=MANAGER 결재</text>
+
+          <rect x="602" y="146" width="160" height="56" rx="9" fill="var(--bg-panel)" stroke="var(--border-strong)" stroke-width="1.2"/>
+          <text x="682" y="168" text-anchor="middle" font-size="11.5" fill="var(--ink)">잔액 차감 실행</text>
+          <text x="682" y="186" text-anchor="middle" font-size="10" fill="var(--ink-faint)">COMPLETED 전이</text>
+
+          <rect x="602" y="220" width="160" height="56" rx="9" fill="var(--bg-panel)" stroke="var(--border-strong)" stroke-width="1.2"/>
+          <text x="682" y="242" text-anchor="middle" font-size="11.5" fill="var(--ink)">감사 로그</text>
+          <text x="682" y="260" text-anchor="middle" font-size="10" fill="var(--ink-faint)">수정·삭제 경로 없음</text>
+
+          <rect x="792" y="120" width="136" height="108" rx="10" fill="var(--finallq-soft)" stroke="var(--finallq)" stroke-width="1.5"/>
+          <text x="860" y="152" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--finallq-ink)">이미 검증됨</text>
+          <text x="860" y="174" text-anchor="middle" font-size="10.5" fill="var(--finallq-ink)">권한 매트릭스 18칸</text>
+          <text x="860" y="191" text-anchor="middle" font-size="10.5" fill="var(--finallq-ink)">허용은 4칸</text>
+          <text x="860" y="212" text-anchor="middle" font-size="10.5" fill="var(--finallq-ink)">테스트 1,232건</text>
+          <line x1="764" y1="174" x2="790" y2="174" stroke="var(--finallq)" stroke-width="1.3" marker-end="url(#sar-ok)"/>
+        </g>
+      </svg>
+      <p class="figcap">🔴 <b>S5가 "구현 중"인 이유는 결재 로직이 없어서가 아닙니다.</b> 요청을 받을 <b>문</b>이 없을 뿐이고, 문 뒤의 레일 — 2단 승인·FDS·감사·잔액 차감 — 은 개인/기업 양쪽 모드로 이미 실증됐습니다. A2A 관점에서 남은 일은 <b>기존 REST 흐름을 Agent Card 스킬로 감싸는 어댑터</b>입니다.</p>
+    </div>
+
+    <div class="subhead">FinAllQ 내부 구조 — 왜 이렇게 나눴나</div>
+    <div class="board">
+      <svg viewBox="0 0 960 330" width="100%" role="img" aria-label="FinAllQ 내부 구조도. 프론트엔드 컨테이너의 Nginx가 정적 서빙과 API 프록시를 겸하며 그 뒤에 Spring Boot 코어, FastAPI AI 서비스, LangGraph MCP 허브가 있고, 코어가 Postgres와 Redis를 소유하며, AI 서비스 장애가 코어로 번지지 않도록 차단기가 사이에 있다.">
+        <defs>
+          <marker id="aar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-faint)"/>
+          </marker>
+        </defs>
+        <g font-family="var(--font-display)" font-size="12">
+          <rect x="16" y="132" width="104" height="52" rx="9" fill="var(--bg-panel)" stroke="var(--border-strong)" stroke-width="1.2"/>
+          <text x="68" y="155" text-anchor="middle" font-size="12" fill="var(--ink)">브라우저</text>
+          <text x="68" y="172" text-anchor="middle" font-size="10" fill="var(--ink-faint)">화면 31개</text>
+
+          <rect x="156" y="126" width="112" height="64" rx="9" fill="var(--finallq-soft)" stroke="var(--finallq)" stroke-width="1.5"/>
+          <text x="212" y="147" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--finallq-ink)">프론트 컨테이너</text>
+          <text x="212" y="163" text-anchor="middle" font-size="10" fill="var(--finallq-ink)">Nginx: 정적+API 프록시</text>
+          <text x="212" y="178" text-anchor="middle" font-size="10" fill="var(--finallq-ink)">:3002</text>
+          <line x1="122" y1="158" x2="154" y2="158" stroke="var(--ink-faint)" stroke-width="1.3" marker-end="url(#aar)"/>
+
+          <rect x="312" y="34" width="176" height="62" rx="9" fill="var(--bg-panel)" stroke="var(--border-strong)" stroke-width="1.2"/>
+          <text x="400" y="58" text-anchor="middle" font-size="12" fill="var(--ink)">Frontend · React 19</text>
+          <text x="400" y="76" text-anchor="middle" font-size="10" fill="var(--ink-faint)">화면 31개 · 근거 패널</text>
+
+          <rect x="312" y="122" width="176" height="72" rx="9" fill="var(--st-done-soft)" stroke="var(--st-done)" stroke-width="1.8"/>
+          <text x="400" y="147" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--st-done-ink)">Backend Core</text>
+          <text x="400" y="165" text-anchor="middle" font-size="10.5" fill="var(--st-done-ink)">Spring Boot · 트랜잭션</text>
+          <text x="400" y="182" text-anchor="middle" font-size="10.5" fill="var(--st-done-ink)">이체 · 인증 · 감사 · 여신</text>
+
+          <line x1="270" y1="146" x2="310" y2="70" stroke="var(--ink-faint)" stroke-width="1.2" marker-end="url(#aar)"/>
+          <line x1="270" y1="158" x2="310" y2="158" stroke="var(--ink-faint)" stroke-width="1.2" marker-end="url(#aar)"/>
+
+          <rect x="326" y="222" width="148" height="58" rx="9" fill="var(--st-todo-soft)" stroke="var(--st-todo)" stroke-width="1.6"/>
+          <text x="400" y="245" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--st-todo-ink)">차단기</text>
+          <text x="400" y="264" text-anchor="middle" font-size="9.5" fill="var(--st-todo-ink)">연속 실패 시 호출을 끊는다</text>
+          <line x1="400" y1="196" x2="400" y2="220" stroke="var(--ink-faint)" stroke-width="1.3" marker-end="url(#aar)"/>
+
+          <rect x="522" y="222" width="148" height="58" rx="9" fill="var(--bg-panel)" stroke="var(--border-strong)" stroke-width="1.2"/>
+          <text x="596" y="245" text-anchor="middle" font-size="11.5" fill="var(--ink)">AI Service · FastAPI</text>
+          <text x="596" y="264" text-anchor="middle" font-size="9.5" fill="var(--ink-faint)">FDS · 스미싱 모델 (14 API)</text>
+          <line x1="476" y1="251" x2="520" y2="251" stroke="var(--ink-faint)" stroke-width="1.3" marker-end="url(#aar)"/>
+
+          <rect x="522" y="122" width="148" height="72" rx="9" fill="var(--finallq-soft)" stroke="var(--finallq)" stroke-width="1.4"/>
+          <text x="596" y="146" text-anchor="middle" font-size="12" font-weight="700" fill="var(--finallq-ink)">MCP Hub</text>
+          <text x="596" y="164" text-anchor="middle" font-size="10.5" fill="var(--finallq-ink)">LangGraph</text>
+          <text x="596" y="181" text-anchor="middle" font-size="10.5" fill="var(--finallq-ink)">툴 20종 (전수 연결)</text>
+          <line x1="490" y1="158" x2="520" y2="158" stroke="var(--ink-faint)" stroke-width="1.2" marker-end="url(#aar)"/>
+          <path d="M596 122 C 596 84, 500 80, 448 112" fill="none" stroke="var(--finallq)" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#aar)"/>
+          <text x="530" y="72" text-anchor="middle" font-size="9.5" fill="var(--finallq-ink)">사용자 JWT로 되돌아 호출</text>
+
+          <rect x="704" y="106" width="112" height="52" rx="9" fill="var(--bg-panel)" stroke="var(--border-strong)" stroke-width="1.2"/>
+          <text x="760" y="129" text-anchor="middle" font-size="11.5" fill="var(--ink)">PostgreSQL</text>
+          <text x="760" y="146" text-anchor="middle" font-size="10" fill="var(--ink-faint)">거래 · 감사 · 여신 (20T)</text>
+          <rect x="704" y="168" width="112" height="52" rx="9" fill="var(--bg-panel)" stroke="var(--border-strong)" stroke-width="1.2"/>
+          <text x="760" y="191" text-anchor="middle" font-size="11.5" fill="var(--ink)">Redis</text>
+          <text x="760" y="208" text-anchor="middle" font-size="10" fill="var(--ink-faint)">세션 · 초대 · 프로필</text>
+          <line x1="490" y1="150" x2="702" y2="132" stroke="var(--ink-faint)" stroke-width="1.2" marker-end="url(#aar)"/>
+          <line x1="490" y1="172" x2="702" y2="192" stroke="var(--ink-faint)" stroke-width="1.2" marker-end="url(#aar)"/>
+
+          <rect x="852" y="126" width="94" height="72" rx="9" fill="var(--st-todo-soft)" stroke="var(--st-critical)" stroke-width="2.4" stroke-dasharray="6 4"/>
+          <text x="899" y="152" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--st-critical)">A2A</text>
+          <text x="899" y="170" text-anchor="middle" font-size="10" fill="var(--st-todo-ink)">:9001</text>
+          <text x="899" y="187" text-anchor="middle" font-size="10" fill="var(--st-critical)">창구 대기</text>
+        </g>
+      </svg>
+      <p class="figcap"><b>코어와 모델을 프로세스 단위로 갈랐습니다.</b> 같은 프로세스에 모델을 태우면 배포는 쉽지만 <b>모델이 죽을 때 이체도 같이 죽습니다.</b> 사이에 <b>차단기</b>를 둬 AI 장애가 코어로 번지지 않게 했습니다 — A2A에서 남의 에이전트를 부를 때도 같은 경계가 필요합니다.</p>
+    </div>
+
+    <div class="subhead">쓴 기법 — 왜 그렇게했는지까지</div>
+    <div class="techgrid">
+      <div class="tech"><span class="tk">오케스트레이션</span><b>LangGraph 상태 그래프</b><p>계획 → 툴 실행 → 답 조립을 노드로 나눠 <b>어느 단계에서 무엇을 했는지 추적</b>됩니다. 🔴 계획은 <b>규칙 기반 키워드 매칭</b>이고 조립은 <b>템플릿</b>입니다 — LLM을 안 쓴 이유는 <b>왜 그 답이 나왔는지 설명할 수 없게 되기 때문</b>입니다.</p></div>
+      <div class="tech"><span class="tk">보안</span><b>화이트리스트 기반 차단</b><p>감사 로그와 AI 전송 페이로드는 <b>등재된 키만</b> 나갑니다. 블랙리스트였다면 새 필드가 생길 때마다 빠뜨릴 위험이 생깁니다 — 계좌번호·금액은 목록에 없어서 <b>구조적으로</b> 실릴 수 없습니다.</p></div>
+      <div class="tech"><span class="tk">안전</span><b>이중 방어 (규칙 → 모델)</b><p>한도 규칙을 먼저 통과해야 FDS에 도달합니다. <b>순서 자체가 통제</b>라서, 모델이 놓쳐도 규칙에서 막힙니다. 반대로 두면 "모델이 놓쳐도 막힌다"는 성질이 사라집니다.</p></div>
+      <div class="tech"><span class="tk">인가</span><b>직무 분리 매트릭스</b><p>판정 축을 전부 곱한 <b>18칸 표를 먼저 그리고</b> 칸 수만큼 테스트를 씁니다. 허용은 4칸뿐이고, 관리자는 <b>결재자가 아닙니다</b> — 시스템 권한과 금전 승인 권한을 한 사람에게 합치지 않습니다.</p></div>
+      <div class="tech"><span class="tk">불변식</span><b>열거가 아니라 "벗어나는가"</b><p>가드를 <code>새 값 == X</code>로 쓰면 값이 추가될 때마다 조용히 뚫립니다. <b>"권한에서 벗어나는 전이인가"</b>로 표현해 새 역할이 생겨도 가드가 유지됩니다 — 실제로 한 번 뚫린 뒤 얻은 교훈입니다.</p></div>
+      <div class="tech"><span class="tk">감사</span><b>append-only · 수정 경로 없음</b><p>성공뿐 아니라 <b>차단·거부된 시도</b>도 남습니다. 다만 이건 애플리케이션 계약이지 DB 제약이 아니라는 한계를 문서에 남겨뒀습니다.</p></div>
+      <div class="tech"><span class="tk">인증</span><b>Access=메모리 · Refresh=HttpOnly</b><p>토큰을 <code>localStorage</code>에 두지 않습니다. 초대 토큰도 같은 원칙이라 <b>화면에 한 번만 보여주고 저장하지 않습니다</b>(스토리지 미저장을 테스트로 고정).</p></div>
+      <div class="tech"><span class="tk">초대</span><b>서버가 역할을 고정</b><p>초대 요청 본문에서 역할·권한을 <b>받지 않습니다.</b> 발급 경로가 서버에서 값을 정해서, 담당자 경로로는 절대 관리자를 만들 수 없습니다 — 권한 상승 경로를 구조로 차단합니다.</p></div>
+      <div class="tech"><span class="tk">시간</span><b>서비스 타임존 명시</b><p>"하루"의 경계를 JVM 기본값에 맡기면 컨테이너 설정이 판정을 좌우합니다. 명시 설정 + <code>Clock</code> 주입으로 고정하고, <b>잘못된 값이면 조용히 넘어가지 않고 부팅에 실패</b>시킵니다.</p></div>
+      <div class="tech"><span class="tk">테스트</span><b>testcontainers 격리 · shuffle 상시</b><p>테스트가 공유 DB에 붙어 실행마다 잔재가 쌓이던 것을 격리했습니다. 프론트는 <b>실행 순서를 매번 섞어</b> 돌립니다 — 순서에 기대는 테스트는 언젠가 무작위로 깨지는데, 그때는 원인을 아무도 모릅니다.</p></div>
+      <div class="tech"><span class="tk">스키마</span><b>Flyway 롤포워드</b><p>적용된 마이그레이션은 <b>절대 수정하지 않고</b> 새 버전을 얹습니다. 체크섬이 깨지면 배포된 환경과 로컬이 갈라집니다.</p></div>
+      <div class="tech"><span class="tk">장애</span><b>Fail-soft + 차단기</b><p>AI 노드가 죽어도 코어는 돕니다. 🔴 다만 <b>빠진 기능을 조용히 숨기지 않고</b> 배너로 알립니다 — 실패가 실패로 보이지 않는 것이 더 나쁩니다.</p></div>
+      <div class="tech"><span class="tk">판정 일관성</span><b>쓰기·읽기가 판정 로직을 공유</b><p>여신 자동거절(신청 시점)과 심사 근거 재조회(화면 표시)가 <b>같은 순수 static 헬퍼</b>를 부릅니다(Sprint 15). 각자 구현하면 "신청 땐 거절인데 화면엔 통과"처럼 <b>DB와 화면이 다른 말</b>을 하게 됩니다 — 판정은 한 곳에만 존재해야 합니다.</p></div>
+      <div class="tech"><span class="tk">비용</span><b>재조회 전 캐시부터 본다</b><p>목록 화면에서 상세를 N건 미리 긁지 않고, <b>펼친 행 1건만</b> 조회 후 loanId로 캐시합니다(절대 원칙 8). 신규 라이브러리 0개 — 기존 컴포넌트(펼침 행·모달)를 재사용하는 것이 이 프로젝트 전반의 기본값입니다.</p></div>
+    </div>
+
+    <div class="connect-note" style="margin-top:22px"><b>A2A로 가려면 남은 일</b> — ① <b>Agent Card</b>(<code>/.well-known/agent-card.json</code>)로 <code>request-withdrawal</code>·<code>assess-loan</code> 같은 스킬을 선언 ② <b>:9001 얼굴 포트</b>를 열고 기존 REST 흐름에 연결하는 어댑터 ③ Task 생명주기 중 <code>input-required</code>(사람 승인 대기) 상태를 <b>기존 결재함에 매핑</b> ④ <code>request_chain_id</code>를 감사 로그에 추가해 멀티홉 추적. <br>🟢 ③은 <b>이미 있는 결재함을 그대로 쓰면 됩니다</b> — 승인 대기라는 개념이 이미 도메인에 있습니다.
+    <br><br>🟡 <b>2026-08-20 재확인</b> — 기업 고객이 "존재하게" 만드는 절반(기업 등록·직원 초대·발급자 lockout)은 이미 다 됐습니다. 그런데 이건 <b>사람 계정</b> 얘기입니다. A2A가 실제로 필요로 하는 건 <b>머신 신원</b>(파트너 자격증명 발급·연결 승인·폐기)이고, 이건 여전히 손도 안 댔습니다(백로그 131·132, QMesh 착수 확정 전까지 보류). 그리고 JWT 클레임에는 지금도 <code>company_id</code>가 없습니다 — 회사 스코프는 매 요청 DB 재조회로 얻습니다. A2A 어댑터를 짤 때 <b>"파트너 토큰 → company_id"</b> 매핑을 어디서 할지가 새로 정할 결정 지점입니다.</div>
+  </section>
+
+  <!-- ================= ③ 통신 다이어그램 ================= -->
+  <section class="slide" id="comm">
+    <div class="sec-head"><h2>③ 세 프로젝트가 주고받는 요청 (통신 다이어그램)</h2><span class="count">경계 넘는 시나리오 10개 · S5·S6·S7·S8·S11~S16</span></div>
+    <p class="sec-note">S1~S4·S9·S10·S17·S18·S19~S29는 각 프로젝트 <b>안에서만</b> 끝나는 흐름이고, 여기 나오는 건 한 프로젝트가 다른 프로젝트에 <term data-tip="완성된 남의 AI 에이전트에게 '이 일 좀 해줘'라고 작업을 통째로 맡기는 것. 내가 직접 하는 게 아니라 상대방에게 부탁하는 개념이에요.">작업을 맡기는</term> 연계 요청입니다.</p>
+
+    <div class="plate">
+      <svg id="triangle" viewBox="0 0 1000 660" width="100%" role="img" aria-label="MaintQ, FinAllQ, InsuQ 세 프로젝트가 삼각형으로 연결된 통신 다이어그램. 각 변 위의 점을 누르거나 가리키면 해당 시나리오 설명이 뜬다.">
+        <line x1="500" y1="110" x2="185" y2="545" stroke="var(--border-strong)" stroke-width="2.5"/>
+        <line x1="500" y1="110" x2="815" y2="545" stroke="var(--border-strong)" stroke-width="2.5"/>
+        <line x1="185" y1="545" x2="815" y2="545" stroke="var(--border-strong)" stroke-width="2.5"/>
+
+        <g>
+          <rect x="380" y="55" width="240" height="60" rx="12" fill="var(--maintq-soft)" stroke="var(--maintq)" stroke-width="1.2"/>
+          <text x="500" y="80" text-anchor="middle" font-family="var(--font-display)" font-size="16" font-weight="700" fill="var(--maintq-ink)">MaintQ</text>
+          <text x="500" y="99" text-anchor="middle" font-family="var(--font-display)" font-size="11.5" fill="var(--maintq-ink)">제조 설비보전</text>
+        </g>
+        <g>
+          <rect x="45" y="515" width="270" height="60" rx="12" fill="var(--finallq-soft)" stroke="var(--finallq)" stroke-width="1.2"/>
+          <text x="180" y="540" text-anchor="middle" font-family="var(--font-display)" font-size="16" font-weight="700" fill="var(--finallq-ink)">FinAllQ</text>
+          <text x="180" y="559" text-anchor="middle" font-family="var(--font-display)" font-size="11.5" fill="var(--finallq-ink)">은행 · 증권</text>
+        </g>
+        <g>
+          <rect x="685" y="515" width="270" height="60" rx="12" fill="var(--insuq-soft)" stroke="var(--insuq)" stroke-width="1.2"/>
+          <text x="820" y="540" text-anchor="middle" font-family="var(--font-display)" font-size="16" font-weight="700" fill="var(--insuq-ink)">InsuQ</text>
+          <text x="820" y="559" text-anchor="middle" font-family="var(--font-display)" font-size="11.5" fill="var(--insuq-ink)">보험</text>
+        </g>
+
+        <g id="markers"></g>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ================= ④ 용어 사전 ================= -->
+  <section class="slide" id="glossary">
+    <div class="sec-head"><h2>④ 용어 사전</h2><span class="count">본문에 나온 어려운 말 모음</span></div>
+    <div class="glossary">
+      <div class="gterm"><b>A2A</b><p>Agent to Agent. 서로 다른 프로젝트(=다른 회사)의 AI끼리 직접 요청을 주고받는 것.</p></div>
+      <div class="gterm"><b>멀티홉</b><p>A가 B에게 요청하고, B가 다시 C에게 물어보는 것처럼 두 단계 이상 거쳐 전달되는 요청.</p></div>
+      <div class="gterm"><b>2단 승인</b><p>돈이 실제로 나가기 전에 사람이 두 번 확인하는 것. 예: 공장 팀장이 한 번, 은행 재무담당이 한 번.</p></div>
+      <div class="gterm"><b>human-in-the-loop</b><p>AI가 결정을 대신하지 않고, 마지막 확정은 항상 사람이 누르게 만드는 설계 원칙.</p></div>
+      <div class="gterm"><b>FDS</b><p>이상거래 탐지 시스템. 수상한 돈 요청을 자동으로 걸러내는 장치.</p></div>
+      <div class="gterm"><b>RAG</b><p>문서(약관·매뉴얼)에서 관련 부분을 찾아서 그걸 근거로 답하는 방식. 지어내지 않고 찾아서 답함.</p></div>
+      <div class="gterm"><b>request_chain_id</b><p>요청이 여러 프로젝트를 거칠 때, "이게 원래 어디서 시작된 요청인지" 추적하는 번호표.</p></div>
+      <div class="gterm"><b>승인 큐</b><p>확인·승인을 기다리는 요청들이 쌓이는 대기 목록 화면.</p></div>
+      <div class="gterm"><b>Agent Card</b><p>AI 에이전트의 명함. "나는 이런 일을 할 수 있다"를 정해진 주소(<code>/.well-known/agent-card.json</code>)에 적어두면 다른 회사 AI가 읽고 일을 맡길 수 있음. <b>FinAllQ엔 아직 없음.</b></p></div>
+      <div class="gterm"><b>앵커(anchor)</b><p>회사에 처음 만들어지는 결재 담당자. 은행이 지정해줘야 생기고, 이 사람이 생겨야 회사가 직원을 초대할 수 있음. 없으면 회사는 사람 0명인 빈 껍데기.</p></div>
+      <div class="gterm"><b>결재 라인</b><p>기업 고객에서 "누가 돈 나가는 걸 승인하나"를 정한 규칙. 요청자와 결재자가 반드시 달라야 하고, 시스템 관리자는 결재자가 아님.</p></div>
+      <div class="gterm"><b>차단기</b><p>바깥 서비스(AI 모델 등)가 계속 실패하면 잠시 호출을 끊어버리는 장치. 한 곳이 죽었을 때 전체가 같이 느려지거나 죽는 걸 막음.</p></div>
+      <div class="gterm"><b>화이트리스트 차단</b><p>"내보내면 안 되는 것"을 적는 대신 <b>"내보내도 되는 것만"</b> 적는 방식. 새 항목이 생겨도 목록에 없으면 자동으로 막히므로 빠뜨릴 위험이 없음.</p></div>
+      <div class="gterm"><b>LangGraph</b><p>AI가 여러 단계를 거쳐 일하는 과정을 그래프(노드와 연결)로 표현하는 도구. 어느 단계에서 뭘 했는지 추적할 수 있음.</p></div>
+      <div class="gterm"><b>Fail-soft</b><p>일부가 고장나도 전체가 멈추지 않고 되는 것만이라도 돌려주는 설계. 단 <b>빠진 게 있다는 걸 사용자에게 알려야</b> 함.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Q 시리즈 · FinAllQ 시나리오 & 구현 현황 지도</span>
+    <span>기준 2026-08-20</span>
+    <span>FinAllQ 수치는 저장소 실측(Sprint 1~14 완료 · Sprint 15 Stage 1 완료) — REST 엔드포인트 59 · 실제 화면 31 · 툴 20 · 테스트 1,300+(백엔드 831·프론트 391) · DB 20테이블 · 게이트웨이 nginx(:8888) 제거, 프론트 컨테이너가 겸함(Sprint 13)</span>
+  </footer>
+
+</div>
+
+<div id="tt" class="tooltip"></div>
+
+<script>
+(function(){
+  var SCN = {
+    S1:  { title:'S1 · 진단→재고→발주 파이프라인', status:'done', important:false, desc:'설비 고장 진단 → 부품 확인 → 재고/가격 → 발주서 초안 → 팀장 승인 기본 흐름 (완료).' },
+    S2:  { title:'S2 · 대체품 탐색', status:'done', important:false, desc:'재고 부족 시 대체 부품 탐색 및 비교 (related_parts 승인 완료, D12 해제).' },
+    S3:  { title:'S3 · 반복고장 → 근본원인 점검', status:'done', important:false, desc:'30일 3회 반복 고장 시 근본원인 점검 모드 전환 (완료).' },
+    S4:  { title:'S4 · 미지 코드 → 한계 인정', status:'done', important:false, desc:'미지 에러코드 정직한 모른다 응답 및 A/S 안내 (환각률 0.0%).' },
+    S5:  { title:'S5 · 출금 요청 (2단 승인)', status:'progress', important:false, desc:'MaintQ→FinAllQ 출금 요청. 공장 팀장 1차 승인 + 은행 18칸 인가 매트릭스 2차 승인.' },
+    S6:  { title:'S6 · 환헤지 · 자금운용 상담', status:'todo', important:false, desc:'남는 돈이나 환율 변동 대비 은행(증권팀) 상담 (미착수).' },
+    S7:  { title:'S7 · 화재보험 갱신 상담', status:'todo', important:true, desc:'공장 화재보험 갱신 시 고장이력 첨부 상담 (MaintQ→InsuQ).' },
+    S8:  { title:'S8 · 담보-보험 검증 (멀티홉)', status:'progress', important:true, desc:'담보 대출 신청 시 여신 심사(Sprint 12 도메인·Sprint 14 거절 이력·Sprint 15 심사 근거 화면) 후 InsuQ에 담보 화재보험 유효성을 2차 홉으로 검증.' },
+    S9:  { title:'S9 · 처분 요청 → 법정조건 차단', status:'done', important:false, desc:'설비 매각 법적 조건 차단(판정 5종 실증) 및 해결방법 안내 (완료).' },
+    S10: { title:'S10 · 근거 번들 → 서명', status:'done', important:false, desc:'매각 근거 자료 3계층 모음 및 4층 방어 사람 서명 (D90 검수 완료).' },
+    S11: { title:'S11 · 보험 목적물 변경 통지', status:'todo', important:false, desc:'설비 변동 시 보험사에 자동 통지 (MaintQ→InsuQ).' },
+    S12: { title:'S12 · 매각대금 정산 · 대출상환', status:'todo', important:false, desc:'매각대금 입금 시 남은 대출 정산/상환 요청 (MaintQ→FinAllQ).' },
+    S13: { title:'S13 · 중고설비 취득 → 담보심사 (멀티홉)', status:'todo', important:true, desc:'중고 설비 매입 시 담보심사 및 보험 유효성 멀티홉 검증.' },
+    S14: { title:'S14 · 위험등급 변동 통지', status:'todo', important:false, desc:'설비 도입 시 공장 위험등급 변동 통지 (MaintQ→InsuQ).' },
+    S15: { title:'S15 · 화재멸실 → 보험금 → 과세이연 (멀티홉)', status:'todo', important:true, desc:'화재멸실 산정 및 과세이연 금융 상담 릴레이.' },
+    S16: { title:'S16 · 설비 취득 자금조달 비교 상담', status:'todo', important:false, desc:'대출/리스/자기자금 조달 방안 비교 상담 (MaintQ→FinAllQ).' },
+    S17: { title:'S17 · 법령 개정 감지 → 재서명', status:'todo', important:false, desc:'법령 개정 감지 후 사람 확인 및 룰 갱신 (check_revisions 코드 완비, v2 제외).' },
+    S18: { title:'S18 · 중고 매수 권리관계 검증', status:'done', important:false, desc:'중고 설비 매수 시 9카테고리 38항목 실사 검증 (전건 PARTIAL 완료).' },
+    S29: { title:'S29 · 수리 완료 → 증빙 서명', status:'done', important:true, desc:'수리 완료 후 부품/시리얼/작업유형 묶어 증빙 서명 (Sprint 9 완료, create_repair_record).' },
+    S19: { title:'S19 · 기업 고객 온보딩 (등록→앵커→초대)', status:'done', important:false, desc:'기업 고객 등록, 첫 결재자(앵커) 지정, 직원 초대 4단계 완결 흐름 (실측 31 PASS).' },
+    S20: { title:'S20 · 이체 요청 → 결재 → 실행', status:'done', important:false, desc:'FinAllQ 돈이 나가는 전체 흐름. 개인은 본인 승인, 기업은 18칸 인가 매트릭스 기반 MANAGER 승인.' },
+    S21: { title:'S21 · 이상거래 탐지 · 경보', status:'done', important:false, desc:'이체 승인 시 규칙(TransferLimitPolicy) → 모델(FDS) 2중 방어 검사.' },
+    S22: { title:'S22 · AI 비서 오케스트레이션', status:'done', important:false, desc:'자연어 질문을 받아 툴 20종(전수 화면 연결 완료) 실행 후 근거 패널과 회신.' },
+    S23: { title:'S23 · 통합 자산 · 리포트', status:'progress', important:false, desc:'은행 계좌와 증권 보유종목을 한 화면에서 보고 요약 리포트를 만듭니다.' },
+    S24: { title:'S24 · 약관 근거 상담', status:'done', important:false, desc:'InsuQ 질문을 받으면 약관 조항을 인용해 3단계로 판정해요.' },
+    S25: { title:'S25 · 정보 부족 → 되묻기', status:'done', important:false, desc:'정보가 부족하면 되묻는 흐름입니다.' },
+    S26: { title:'S26 · 근거 없음 → 거부', status:'done', important:false, desc:'약관에 근거가 없으면 확인 불가 거부.' },
+    S27: { title:'S27 · 멀티홉 조항 추적', status:'done', important:false, desc:'조항 간 참조를 따라가는 추적 흐름.' },
+    S28: { title:'S28 · 화재·재물 도메인', status:'progress', important:true, desc:'화재·재물 특약 조항 RAG 및 평가.' },
+    IA2A:{ title:'InsuQ A2A 얼굴', status:'todo', important:true, desc:'InsuQ의 A2A 창구.' },
+    A2A: { title:'FinAllQ A2A 얼굴 (Agent Card · :9001)', status:'todo', important:true, desc:'FinAllQ에 요청을 받을 명함(Agent Card)과 :9001 포트. 안쪽 레일은 준비 완료 상태입니다.' }
+  };
+
+  var STATUS_LABEL = { done:'구현됨', progress:'구현 중', todo:'아직 시작 안 함' };
+  var tip = document.getElementById('tt');
+  var pinnedId = null;
+
+  function fillTooltip(id){
+    var s = SCN[id];
+    if (!s) return;
+    var statusClass = s.important && s.status === 'todo' ? 'critical' : s.status;
+    var statusText = s.important && s.status === 'todo' ? '중요 · 미착수' : STATUS_LABEL[s.status];
+    tip.innerHTML = '<div class="tt-head"><b>' + s.title + '</b><span class="tt-status ' + statusClass + '">' + statusText + '</span></div><div>' + s.desc + '</div>';
+  }
+
+  function positionTooltip(e){
+    var x = (e && e.clientX) ? e.clientX + 14 : window.innerWidth / 2 - 150;
+    var y = (e && e.clientY) ? e.clientY + 18 : window.innerHeight / 2;
+    var maxX = window.innerWidth - 360;
+    if (x > maxX) x = maxX;
+    var maxY = window.innerHeight - 160;
+    if (y > maxY) y = maxY;
+    tip.style.left = x + 'px';
+    tip.style.top = y + 'px';
+  }
+
+  function highlight(id){
+    document.querySelectorAll('.scn').forEach(function(n){ n.classList.remove('hl'); });
+    document.querySelectorAll('.scn[data-id="' + id + '"]').forEach(function(n){ n.classList.add('hl'); });
+  }
+
+  function bindScnHandlers(el, id){
+    el.classList.add('scn');
+    el.setAttribute('data-id', id);
+    el.setAttribute('tabindex', '0');
+    el.addEventListener('mouseenter', function(e){
+      if (pinnedId) return;
+      fillTooltip(id); positionTooltip(e); tip.classList.add('show'); highlight(id);
+    });
+    el.addEventListener('mousemove', function(e){ if (!pinnedId) positionTooltip(e); });
+    el.addEventListener('mouseleave', function(){
+      if (pinnedId) return;
+      tip.classList.remove('show');
+      document.querySelectorAll('.scn').forEach(function(n){ n.classList.remove('hl'); });
+    });
+    el.addEventListener('focus', function(e){ fillTooltip(id); positionTooltip(e); tip.classList.add('show'); highlight(id); });
+    el.addEventListener('blur', function(){ if (!pinnedId) tip.classList.remove('show'); });
+    el.addEventListener('click', function(e){
+      e.stopPropagation();
+      pinnedId = id;
+      fillTooltip(id); positionTooltip(e); tip.classList.add('show'); highlight(id);
+    });
+  }
+
+  document.addEventListener('click', function(){
+    pinnedId = null;
+    tip.classList.remove('show');
+    document.querySelectorAll('.scn').forEach(function(n){ n.classList.remove('hl'); });
+  });
+
+  document.querySelectorAll('term').forEach(function(el){
+    el.setAttribute('tabindex', '0');
+    var text = el.getAttribute('data-tip');
+    function show(e){ tip.innerHTML = text; tip.classList.add('show'); positionTooltip(e); }
+    function hide(){ if (!pinnedId) tip.classList.remove('show'); }
+    el.addEventListener('mouseenter', show);
+    el.addEventListener('mousemove', show);
+    el.addEventListener('mouseleave', hide);
+    el.addEventListener('focus', show);
+    el.addEventListener('blur', hide);
+  });
+
+  document.querySelectorAll('[data-tip]').forEach(function(el){
+    if (el.tagName && el.tagName.toLowerCase() === 'term') return;
+    var text = el.getAttribute('data-tip');
+    if (el.hasAttribute && !el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+    function show(e){ tip.innerHTML = text; tip.classList.add('show'); positionTooltip(e); }
+    function hide(){ if (!pinnedId) tip.classList.remove('show'); }
+    el.addEventListener('mouseenter', show);
+    el.addEventListener('mousemove', show);
+    el.addEventListener('mouseleave', hide);
+    el.addEventListener('focus', show);
+    el.addEventListener('blur', hide);
+  });
+
+  function statusClasses(s){
+    var cls = 'st-' + s.status;
+    if (s.important && s.status === 'todo') cls += ' important';
+    return cls;
+  }
+
+  document.querySelectorAll('.badge-row').forEach(function(row){
+    var ids = row.getAttribute('data-badges').split(',');
+    ids.forEach(function(id){
+      var s = SCN[id];
+      if (!s) return;
+      var span = document.createElement('span');
+      span.className = 'scn-badge ' + statusClasses(s);
+      span.textContent = id;
+      row.appendChild(span);
+      bindScnHandlers(span, id);
+    });
+  });
+
+  var markers = [
+    { id:'S5',  x:467, y:207 }, { id:'S6', x:352, y:232 }, { id:'S12', x:368, y:348 },
+    { id:'S16', x:253, y:373 }, { id:'S8', x:269, y:489 }, { id:'S13', x:170, y:490 },
+    { id:'S7',  x:550, y:230 }, { id:'S11',x:681, y:278 }, { id:'S14', x:682, y:418 },
+    { id:'S15', x:813, y:466 },
+    { id:'S8b', x:368, y:520, ref:'S8' }, { id:'S13b', x:500, y:600, ref:'S13' }, { id:'S15b', x:632, y:520, ref:'S15' }
+  ];
+  var stubs = {
+    S5:{x1:434,y1:184}, S6:{x1:384,y1:254}, S12:{x1:335,y1:325}, S16:{x1:285,y1:395}, S8:{x1:236,y1:466}, S13:{x1:203,y1:513},
+    S7:{x1:582,y1:207}, S11:{x1:648,y1:301}, S14:{x1:714,y1:395}, S15:{x1:780,y1:489},
+    S8b:{x1:368,y1:560}, S13b:{x1:500,y1:560}, S15b:{x1:632,y1:560}
+  };
+
+  var svgNS = 'http://www.w3.org/2000/svg';
+  var g = document.getElementById('markers');
+  if (g) {
+    var COLOR = {
+      done: { fill:'var(--st-done-soft)', stroke:'var(--st-done)', text:'var(--st-done-ink)' },
+      progress: { fill:'var(--st-progress-soft)', stroke:'var(--st-progress)', text:'var(--st-progress-ink)' },
+      todo: { fill:'var(--st-todo-soft)', stroke:'var(--st-todo)', text:'var(--st-todo-ink)' },
+      critical: { fill:'var(--st-todo-soft)', stroke:'var(--st-critical)', text:'var(--st-todo-ink)' }
+    };
+
+    markers.forEach(function(m){
+      var refId = m.ref || m.id;
+      var s = SCN[refId];
+      if (!s) return;
+      var c = (s.important && s.status === 'todo') ? COLOR.critical : COLOR[s.status];
+      var stub = stubs[m.id];
+
+      var line = document.createElementNS(svgNS, 'line');
+      line.setAttribute('x1', stub.x1); line.setAttribute('y1', stub.y1);
+      line.setAttribute('x2', m.x); line.setAttribute('y2', m.y);
+      line.setAttribute('stroke', 'var(--border-strong)'); line.setAttribute('stroke-width', '1.2');
+      g.appendChild(line);
+
+      var group = document.createElementNS(svgNS, 'g');
+      group.setAttribute('class', 'chip-node');
+
+      var circ = document.createElementNS(svgNS, 'circle');
+      circ.setAttribute('class', 'core');
+      circ.setAttribute('cx', m.x); circ.setAttribute('cy', m.y); circ.setAttribute('r', 16);
+      circ.setAttribute('fill', c.fill); circ.setAttribute('stroke', c.stroke);
+      circ.setAttribute('stroke-width', (s.important && s.status === 'todo') ? '3' : '1.5');
+      group.appendChild(circ);
+
+      var txt = document.createElementNS(svgNS, 'text');
+      txt.setAttribute('x', m.x); txt.setAttribute('y', m.y + 4);
+      txt.setAttribute('text-anchor', 'middle');
+      txt.setAttribute('font-size', '10.5');
+      txt.setAttribute('font-family', 'var(--font-mono)');
+      txt.setAttribute('font-weight', '700');
+      txt.setAttribute('fill', c.text);
+      txt.textContent = refId;
+      group.appendChild(txt);
+
+      g.appendChild(group);
+      bindScnHandlers(group, refId);
+    });
+  }
+})();
+</script>
+</body>
+</html>
