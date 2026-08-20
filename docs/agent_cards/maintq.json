@@ -1,0 +1,28 @@
+{
+  "name": "MaintQ",
+  "description": "제조 설비보전 에이전트. 진단→발주→처분까지 단독 완결되며, A2A에서는 모든 크로스도메인 시나리오(S5~S16)의 시작점(client) 역할을 한다. 유일한 예외는 S15로, 사고 이벤트가 InsuQ 쪽 요청을 촉발한 뒤 MaintQ가 그 응답을 받아 FinAllQ에 재요청한다.",
+  "url": "https://maintq.internal/.well-known/agent-card.json",
+  "version": "0.1.0-draft",
+  "provider": {
+    "organization": "MaintQ"
+  },
+  "authentication": {
+    "schemes": ["oauth2-mock"],
+    "note": "M1 단계에서는 목업 토큰. 신원 확인은 payload.requester로 대체(A2A_IDENTITY.md 결정 1)."
+  },
+  "skills": [],
+  "notes": [
+    "MaintQ는 A2A 스킬을 노출하지 않는다 — 요청을 시작하는 client 역할이 기본이다.",
+    "S5: request-withdrawal → FinAllQ",
+    "S6: advise-hedge → FinAllQ",
+    "S7: advise-policy-renewal → InsuQ",
+    "S8: assess-loan → FinAllQ (FinAllQ가 내부에서 InsuQ verify-collateral-insurance 2차 홉)",
+    "S11: notify-asset-change → InsuQ",
+    "S12: request-settlement → FinAllQ",
+    "S13: assess-used-equipment-loan → FinAllQ (2차 홉 동일 패턴)",
+    "S14: notify-risk-change → InsuQ",
+    "S15: claim-insurance → InsuQ 먼저, 응답 후 advise-replacement-financing → FinAllQ",
+    "S16: advise-financing → FinAllQ",
+    "S9·S10·S17·S18은 MaintQ 단독 처리이며 A2A 아님 (MaintQ_core_features_v2.md 참조)"
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "name": "FinAllQ",
+  "description": "은행·증권 통합 금융 에이전트. 이상거래 탐지(FDS)·포트폴리오·스미싱 탐지를 갖춘 개인화 금융 비서이며, A2A로는 응답자이자 2차 홉 요청자(S8·S13·S15) 역할을 한다.",
+  "url": "https://finallq.internal/.well-known/agent-card.json",
+  "version": "0.1.0-draft",
+  "provider": {
+    "organization": "FinAllQ"
+  },
+  "authentication": {
+    "schemes": ["oauth2-mock"],
+    "note": "M1 단계에서는 목업 토큰. 신원 확인은 payload.requester로 대체(A2A_IDENTITY.md 결정 1)."
+  },
+  "skills": [
+    {
+      "id": "request-withdrawal",
+      "name": "출금 요청 접수",
+      "description": "발주 승인이 끝난 부품 대금 출금을 요청한다. 실행이 아니라 요청이며, FDS 검사 후 재무 승인(2단)을 거쳐야 실행된다.",
+      "scenario": "S5",
+      "schema": "schemas/request-withdrawal.json"
+    },
+    {
+      "id": "advise-hedge",
+      "name": "환헤지/자금운용 상담",
+      "description": "환노출·여유자금에 대한 헤지·운용 방안을 비교 제시한다. 실행 없음, 제안만.",
+      "scenario": "S6",
+      "schema": "schemas/advise-hedge.json"
+    },
+    {
+      "id": "assess-loan",
+      "name": "담보 대출 심사",
+      "description": "설비 담보 대출을 심사한다. 담보가 공장 건물일 경우 내부적으로 InsuQ의 verify-collateral-insurance를 2차 홉으로 호출한다.",
+      "scenario": "S8",
+      "schema": "schemas/assess-loan.json"
+    },
+    {
+      "id": "request-settlement",
+      "name": "매각대금 정산·대출상환 요청",
+      "description": "설비 매각대금으로 잔여 대출을 상환할지 판단을 요청한다. S5의 반대 방향(들어오는 돈).",
+      "scenario": "S12",
+      "schema": "schemas/request-settlement.json"
+    },
+    {
+      "id": "assess-used-equipment-loan",
+      "name": "중고 설비 담보 대출 심사",
+      "description": "중고 설비 취득을 위한 담보 대출을 심사한다(S8의 중고 버전). InsuQ의 verify-collateral-insurance를 재사용해 2차 홉 호출하며, 비례보상을 반영한다.",
+      "scenario": "S13",
+      "schema": "schemas/assess-used-equipment-loan.json"
+    },
+    {
+      "id": "advise-financing",
+      "name": "설비 취득 자금 조달 비교 상담",
+      "description": "대출/리스/자기자금 조달 방식을 비교 제시한다. 처분 시 제약(근저당·소유권)을 사전 고지한다.",
+      "scenario": "S16",
+      "schema": "schemas/advise-financing.json"
+    },
+    {
+      "id": "advise-replacement-financing",
+      "name": "대체취득 자금 조달 상담",
+      "description": "보험금 수령 후 대체취득 예산에 대한 조달 방안을 비교 제시한다. S15의 2차 홉으로만 호출된다(직접 진입 없음).",
+      "scenario": "S15",
+      "schema": "schemas/advise-replacement-financing.json"
+    }
+  ],
+  "notes": [
+    "이 프로젝트에 LLM 없음 — 판단은 규칙+ML(FDS), 계획은 키워드 매칭, 답변은 템플릿 조립.",
+    "돈이 움직이는 스킬(request-withdrawal, request-settlement)은 반드시 input-required 상태를 거친다.",
+    "assess-loan, assess-used-equipment-loan은 내부에서 InsuQ verify-collateral-insurance를 호출하는 2차 홉 발신자이기도 하다."
+  ]
+}

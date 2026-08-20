@@ -1,0 +1,48 @@
+{
+  "skill_id": "advise-replacement-financing",
+  "scenario": "S15",
+  "direction": "MaintQ -> FinAllQ (S15의 2차 홉 — claim-insurance 응답 이후에만 호출됨, 직접 진입 없음)",
+  "description": "보험금 수령 후 대체취득 예산에 대한 조달 방안을 비교 제시한다. 과세이연 기한 추적과 함께 사용된다.",
+  "request": {
+    "type": "object",
+    "required": ["requester", "request_chain_id", "replacement_budget", "insurance_payout", "tax_deferral_deadline"],
+    "properties": {
+      "requester": { "$ref": "#/definitions/requester" },
+      "request_chain_id": { "type": "string" },
+      "replacement_budget": { "type": "number" },
+      "insurance_payout": { "type": "number" },
+      "insurance_gain": { "type": "number", "description": "보험차익 = 보험금 - 장부가액, MaintQ가 미리 계산해 전달" },
+      "tax_deferral_deadline": { "type": "string", "format": "date" }
+    }
+  },
+  "response": {
+    "type": "object",
+    "required": ["status", "options"],
+    "properties": {
+      "status": { "type": "string", "enum": ["completed"] },
+      "options": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "method": { "type": "string" },
+            "risk_note": { "type": "string" },
+            "cost_note": { "type": "string" }
+          }
+        }
+      },
+      "tax_deferral_applicability": { "type": "string", "enum": ["deferred", "needs_expert_review"], "description": "과세이연 적용 여부는 단정 금지 — 항상 유보 또는 전문가 확인 안내" }
+    }
+  },
+  "definitions": {
+    "requester": {
+      "type": "object",
+      "required": ["finallq_company_id"],
+      "properties": {
+        "finallq_company_id": { "type": "string" },
+        "building_id": { "type": "string" },
+        "policy_id": { "type": "string" }
+      }
+    }
+  }
+}

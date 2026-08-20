@@ -1,0 +1,49 @@
+{
+  "skill_id": "claim-insurance",
+  "scenario": "S15",
+  "direction": "MaintQ -> InsuQ (사고 이벤트 트리거 — 유일하게 사람이 아니라 사고가 시작점)",
+  "description": "설비 화재 멸실에 대한 보험금을 약관 기준으로 산정한다. 사람 최종 승인 필요. 응답 후 MaintQ가 advise-replacement-financing으로 FinAllQ를 2차 홉 호출한다.",
+  "request": {
+    "type": "object",
+    "required": ["requester", "request_chain_id", "building_id", "policy_id", "equipment_info", "incident_detail", "book_value"],
+    "properties": {
+      "requester": { "$ref": "#/definitions/requester" },
+      "request_chain_id": { "type": "string" },
+      "building_id": { "type": "string" },
+      "policy_id": { "type": "string" },
+      "equipment_info": { "type": "object" },
+      "incident_detail": { "type": "object", "properties": { "date": { "type": "string", "format": "date" }, "cause": { "type": "string" } } },
+      "book_value": { "type": "number", "description": "장부가액 — MaintQ가 보험차익 계산에 사용" }
+    }
+  },
+  "response": {
+    "type": "object",
+    "required": ["status", "payout_decision", "evidence"],
+    "properties": {
+      "status": { "type": "string", "enum": ["input-required", "completed", "rejected"] },
+      "rejection_reason": {
+        "type": "string",
+        "description": "PROPOSED(InsuQ, 2026-08-19): status=rejected 일 때 필수. 거부는 장애가 아니므로 HTTP 200 으로 내려간다.",
+        "enum": ["no_evidence_found", "citation_unverified", "out_of_corpus", "policy_not_found"]
+      },
+      "payout_decision": { "type": "number" },
+      "evidence": {
+        "type": "array",
+        "description": "PROPOSED(InsuQ, 2026-08-19): 인용 형식 고정. `{상품명} {policy_part} {article_no}[ {clause_no}][, p.{page}]` — policy_part 생략 금지(파트 간 조 번호가 충돌해, 조 번호만 대조하면 다른 파트의 같은 조 번호를 지어내도 환각 탐지를 통과한다).",
+        "items": { "type": "string", "pattern": "^.+ .+ 제\\d+조( [①-⑳\\d]+항?)?(, p\\.\\d+)?$" }
+      },
+      "requires_human_approval": { "type": "boolean", "const": true }
+    }
+  },
+  "definitions": {
+    "requester": {
+      "type": "object",
+      "required": ["finallq_company_id"],
+      "properties": {
+        "finallq_company_id": { "type": "string" },
+        "building_id": { "type": "string" },
+        "policy_id": { "type": "string" }
+      }
+    }
+  }
+}

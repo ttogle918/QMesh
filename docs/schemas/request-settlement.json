@@ -1,0 +1,41 @@
+{
+  "skill_id": "request-settlement",
+  "scenario": "S12",
+  "direction": "MaintQ -> FinAllQ",
+  "description": "설비 매각대금으로 잔여 대출을 상환할지 판단을 요청한다. S5의 반대 방향(들어오는 돈), 2단 승인.",
+  "request": {
+    "type": "object",
+    "required": ["requester", "request_chain_id", "decision_id", "sale_amount", "lien_creditor", "outstanding_loan", "approved_by"],
+    "properties": {
+      "requester": { "$ref": "#/definitions/requester" },
+      "request_chain_id": { "type": "string" },
+      "decision_id": { "type": "string" },
+      "sale_amount": { "type": "number" },
+      "lien_creditor": { "type": "string" },
+      "outstanding_loan": { "type": "number" },
+      "prepayment_fee": { "type": "number" },
+      "approved_by": { "type": "string" }
+    }
+  },
+  "response": {
+    "type": "object",
+    "required": ["status"],
+    "properties": {
+      "status": { "type": "string", "enum": ["input-required", "rejected", "completed"] },
+      "action": { "type": "string", "enum": ["repay", "hold"] },
+      "lien_released": { "type": "boolean", "description": "true면 MaintQ 처분 블로커 LIEN-CONSENT 해소" },
+      "remaining_balance": { "type": "number" }
+    }
+  },
+  "definitions": {
+    "requester": {
+      "type": "object",
+      "required": ["finallq_company_id"],
+      "properties": {
+        "finallq_company_id": { "type": "string" },
+        "building_id": { "type": "string" },
+        "policy_id": { "type": "string" }
+      }
+    }
+  }
+}

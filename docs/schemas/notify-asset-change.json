@@ -1,0 +1,50 @@
+{
+  "skill_id": "notify-asset-change",
+  "scenario": "S11",
+  "direction": "MaintQ -> InsuQ",
+  "description": "설비 처분 확정에 따른 부보 목적물 변경(REMOVE/ADD)을 통지 접수한다.",
+  "request": {
+    "type": "object",
+    "required": ["requester", "request_chain_id", "building_id", "policy_id", "change_type", "equipment", "effective_date", "decision_id"],
+    "properties": {
+      "requester": { "$ref": "#/definitions/requester" },
+      "request_chain_id": { "type": "string" },
+      "building_id": { "type": "string" },
+      "policy_id": { "type": "string" },
+      "change_type": { "type": "string", "enum": ["REMOVE", "ADD"] },
+      "equipment": { "type": "array", "items": { "type": "string" } },
+      "effective_date": { "type": "string", "format": "date" },
+      "decision_id": { "type": "string", "description": "MaintQ 처분 서명(근거 3계층) 레코드 ID" }
+    }
+  },
+  "response": {
+    "type": "object",
+    "required": ["status", "receipt_no", "evidence"],
+    "properties": {
+      "status": { "type": "string", "enum": ["completed", "rejected"] },
+      "rejection_reason": {
+        "type": "string",
+        "description": "PROPOSED(InsuQ, 2026-08-19): status=rejected 일 때 필수. 거부는 장애가 아니므로 HTTP 200 으로 내려간다.",
+        "enum": ["no_evidence_found", "citation_unverified", "out_of_corpus", "policy_not_found"]
+      },
+      "receipt_no": { "type": "string" },
+      "premium_adjustment": { "type": "number" },
+      "evidence": {
+        "type": "array",
+        "description": "PROPOSED(InsuQ, 2026-08-19): 인용 형식 고정. `{상품명} {policy_part} {article_no}[ {clause_no}][, p.{page}]` — policy_part 생략 금지(파트 간 조 번호가 충돌해, 조 번호만 대조하면 다른 파트의 같은 조 번호를 지어내도 환각 탐지를 통과한다).",
+        "items": { "type": "string", "pattern": "^.+ .+ 제\\d+조( [①-⑳\\d]+항?)?(, p\\.\\d+)?$" }
+      }
+    }
+  },
+  "definitions": {
+    "requester": {
+      "type": "object",
+      "required": ["finallq_company_id"],
+      "properties": {
+        "finallq_company_id": { "type": "string" },
+        "building_id": { "type": "string" },
+        "policy_id": { "type": "string" }
+      }
+    }
+  }
+}

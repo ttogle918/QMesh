@@ -1,0 +1,45 @@
+{
+  "skill_id": "request-withdrawal",
+  "scenario": "S5",
+  "direction": "MaintQ -> FinAllQ",
+  "description": "발주 승인 완료된 부품 대금의 출금을 요청한다. 실행이 아니라 요청이며 2단 승인(팀장 -> 재무)을 거친다.",
+  "request": {
+    "type": "object",
+    "required": ["requester", "request_chain_id", "po_id", "amount", "supplier", "approved_by", "purpose", "error_code"],
+    "properties": {
+      "requester": { "$ref": "#/definitions/requester" },
+      "request_chain_id": { "type": "string" },
+      "po_id": { "type": "string" },
+      "amount": { "type": "number" },
+      "currency": { "type": "string", "default": "KRW" },
+      "supplier": { "type": "string" },
+      "approved_by": { "type": "string", "description": "MaintQ 팀장 승인자 ID" },
+      "purpose": { "type": "string" },
+      "error_code": { "type": "string" }
+    }
+  },
+  "response": {
+    "type": "object",
+    "required": ["status"],
+    "properties": {
+      "status": { "type": "string", "enum": ["input-required", "rejected", "completed"] },
+      "fds_check": { "type": "string", "enum": ["pass", "hold"] },
+      "requires_escalation": { "type": "boolean", "description": "금액 임계값 초과 시 상위 결재 필요 여부" },
+      "req_id": { "type": "string" },
+      "approved_by_finance": { "type": "string" },
+      "executed_at": { "type": "string", "format": "date-time" },
+      "reject_reason": { "type": "string" }
+    }
+  },
+  "definitions": {
+    "requester": {
+      "type": "object",
+      "required": ["finallq_company_id"],
+      "properties": {
+        "finallq_company_id": { "type": "string" },
+        "building_id": { "type": "string" },
+        "policy_id": { "type": "string" }
+      }
+    }
+  }
+}

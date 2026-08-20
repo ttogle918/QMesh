@@ -1,0 +1,49 @@
+{
+  "skill_id": "advise-hedge",
+  "scenario": "S6",
+  "direction": "MaintQ -> FinAllQ",
+  "description": "환노출·여유자금에 대한 헤지/운용 방안을 비교 제시한다. 실행 없음, 제안만.",
+  "request": {
+    "type": "object",
+    "required": ["requester", "request_chain_id", "exposure_amount", "currency", "horizon", "risk_tolerance"],
+    "properties": {
+      "requester": { "$ref": "#/definitions/requester" },
+      "request_chain_id": { "type": "string" },
+      "exposure_amount": { "type": "number" },
+      "currency": { "type": "string" },
+      "horizon": { "type": "string", "description": "예: '2026-Q4'" },
+      "risk_tolerance": { "type": "string", "enum": ["conservative", "neutral", "aggressive"] }
+    }
+  },
+  "response": {
+    "type": "object",
+    "required": ["status", "options"],
+    "properties": {
+      "status": { "type": "string", "enum": ["completed"] },
+      "options": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["method", "risk_note", "cost_note"],
+          "properties": {
+            "method": { "type": "string", "description": "예: 선물환/옵션/무헤지/MMF/단기채" },
+            "risk_note": { "type": "string" },
+            "cost_note": { "type": "string" }
+          }
+        }
+      },
+      "disclaimer": { "type": "string", "const": "투자자문 아님 — 실제 가입은 사람이 별도 결정" }
+    }
+  },
+  "definitions": {
+    "requester": {
+      "type": "object",
+      "required": ["finallq_company_id"],
+      "properties": {
+        "finallq_company_id": { "type": "string" },
+        "building_id": { "type": "string" },
+        "policy_id": { "type": "string" }
+      }
+    }
+  }
+}

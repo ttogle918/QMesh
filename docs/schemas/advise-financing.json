@@ -1,0 +1,67 @@
+{
+  "skill_id": "advise-financing",
+  "scenario": "S16",
+  "direction": "MaintQ -> FinAllQ",
+  "description": "설비 취득 자금 조달 방식(대출/리스/자기자금)을 비교 제시한다. 처분 시 제약(근저당·소유권)을 사전 고지한다.",
+  "request": {
+    "type": "object",
+    "required": ["requester", "request_chain_id", "amount", "purpose", "horizon"],
+    "properties": {
+      "requester": { "$ref": "#/definitions/requester" },
+      "request_chain_id": { "type": "string" },
+      "amount": { "type": "number" },
+      "purpose": { "type": "string" },
+      "horizon": { "type": "string" },
+      "existing_debt": { "type": "number" },
+      "collateral_available": { "type": "boolean" }
+    }
+  },
+  "response": {
+    "type": "object",
+    "required": ["status", "options"],
+    "properties": {
+      "status": { "type": "string", "enum": ["completed"] },
+      "options": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["method", "risk_note", "cost_note", "post_disposal_constraint"],
+          "properties": {
+            "method": { "type": "string", "enum": ["secured_loan", "lease", "own_funds"] },
+            "risk_note": { "type": "string" },
+            "cost_note": { "type": "string" },
+            "tax_note": { "type": "string" },
+            "post_disposal_constraint": { "type": "string", "description": "예: secured_loan -> 처분 시 근저당 동의 필요 / lease -> 소유권 없음, 매각 불가" }
+          }
+        }
+      },
+      "disclaimer": { "type": "string", "const": "투자자문 아님 — 실제 결정은 사람이" },
+      "market_context": {
+        "type": ["object", "null"],
+        "description": "FinAllQ 내부 참고 데이터. A2A 계약상 필수 아님 — 없으면 null. options[].cost_note/risk_note 문구를 풍부하게 하는 용도로만 쓰고, 조달방식 비교 로직 자체를 이 값에 종속시키지 않는다.",
+        "properties": {
+          "esg_rating": { "type": ["string", "null"], "description": "예: 'A', 'BBB' — ESG 연계 대출 우대금리 여부 판단에 참고용. 미보유 시 null" },
+          "stock_price_snapshot": {
+            "type": ["object", "null"],
+            "properties": {
+              "as_of": { "type": "string", "format": "date" },
+              "price": { "type": "number" },
+              "volatility_30d_pct": { "type": "number" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "requester": {
+      "type": "object",
+      "required": ["finallq_company_id"],
+      "properties": {
+        "finallq_company_id": { "type": "string" },
+        "building_id": { "type": "string" },
+        "policy_id": { "type": "string" }
+      }
+    }
+  }
+}

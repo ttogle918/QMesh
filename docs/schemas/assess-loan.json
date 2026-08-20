@@ -1,0 +1,60 @@
+{
+  "skill_id": "assess-loan",
+  "scenario": "S8",
+  "direction": "MaintQ -> FinAllQ (FinAllQ가 내부적으로 InsuQ verify-collateral-insurance 2차 홉 호출)",
+  "description": "설비 담보 대출을 심사한다. 담보=공장 건물일 경우 InsuQ에 보험 유효성을 조회한 뒤 조건부 승인 여부를 판정한다.",
+  "request": {
+    "type": "object",
+    "required": ["requester", "request_chain_id", "loan_amount", "purpose", "collateral_building_id"],
+    "properties": {
+      "requester": { "$ref": "#/definitions/requester" },
+      "request_chain_id": { "type": "string" },
+      "loan_amount": { "type": "number" },
+      "purpose": { "type": "string" },
+      "collateral_building_id": { "type": "string" }
+    }
+  },
+  "response": {
+    "type": "object",
+    "required": ["status", "decision"],
+    "properties": {
+      "status": { "type": "string", "enum": ["completed"] },
+      "decision": { "type": "string", "enum": ["approved", "conditional", "rejected"] },
+      "condition_note": { "type": "string", "description": "예: '보험 3억->5억 증액 필요'" },
+      "collateral_check": {
+        "type": "object",
+        "description": "InsuQ verify-collateral-insurance 2차 홉 응답을 요약해 담음",
+        "properties": {
+          "coverage_amount": { "type": "number" },
+          "sufficient": { "type": "boolean" }
+        }
+      },
+      "market_context": {
+        "type": ["object", "null"],
+        "description": "FinAllQ 내부 참고 데이터. A2A 계약상 필수 아님 — 없으면 null. condition_note 문구를 풍부하게 하는 용도로만 쓰고 심사 결정 로직에 강제 반영하지 않는다.",
+        "properties": {
+          "esg_rating": { "type": ["string", "null"], "description": "예: 'A', 'BBB' — 미보유 시 null" },
+          "stock_price_snapshot": {
+            "type": ["object", "null"],
+            "properties": {
+              "as_of": { "type": "string", "format": "date" },
+              "price": { "type": "number" },
+              "volatility_30d_pct": { "type": "number" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "requester": {
+      "type": "object",
+      "required": ["finallq_company_id"],
+      "properties": {
+        "finallq_company_id": { "type": "string" },
+        "building_id": { "type": "string" },
+        "policy_id": { "type": "string" }
+      }
+    }
+  }
+}

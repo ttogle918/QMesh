@@ -1,0 +1,53 @@
+{
+  "skill_id": "verify-collateral-insurance",
+  "scenario": "S8, S13",
+  "direction": "FinAllQ -> InsuQ (2차 홉, MaintQ가 직접 호출하지 않음)",
+  "description": "건물의 유효 보험·보장 한도를 조회한다. 순수 조회, 실행 없음. S13에서는 비례보상(상법 674조) 계산까지 확장된다.",
+  "request": {
+    "type": "object",
+    "required": ["requester", "request_chain_id", "building_id", "required_coverage"],
+    "properties": {
+      "requester": { "$ref": "#/definitions/requester" },
+      "request_chain_id": { "type": "string" },
+      "building_id": { "type": "string" },
+      "required_coverage": { "type": "number" },
+      "loss_amount": { "type": "number", "description": "S13 비례보상 계산 시에만 사용" }
+    }
+  },
+  "response": {
+    "type": "object",
+    "required": ["status", "policy_valid", "coverage_amount", "evidence"],
+    "properties": {
+      "status": { "type": "string", "enum": ["completed", "rejected"] },
+      "rejection_reason": {
+        "type": "string",
+        "description": "PROPOSED(InsuQ, 2026-08-19): status=rejected 일 때 필수. 거부는 장애가 아니므로 HTTP 200 으로 내려간다.",
+        "enum": ["no_evidence_found", "citation_unverified", "out_of_corpus", "policy_not_found"]
+      },
+      "policy_valid": { "type": "boolean" },
+      "coverage_amount": { "type": "number" },
+      "insured_value": { "type": "number", "description": "보험가액 — S13 비례보상 계산에 사용" },
+      "effective_recovery": {
+        "type": "number",
+        "description": "S13 전용: 실효 회수액 = 손해액 x (보험금액/보험가액)"
+      },
+      "sufficient": { "type": "boolean", "description": "coverage_amount >= required_coverage 여부" },
+      "evidence": {
+        "type": "array",
+        "description": "PROPOSED(InsuQ, 2026-08-19): 인용 형식 고정. `{상품명} {policy_part} {article_no}[ {clause_no}][, p.{page}]` — policy_part 생략 금지(파트 간 조 번호가 충돌해, 조 번호만 대조하면 다른 파트의 같은 조 번호를 지어내도 환각 탐지를 통과한다).",
+        "items": { "type": "string", "pattern": "^.+ .+ 제\\d+조( [①-⑳\\d]+항?)?(, p\\.\\d+)?$" }
+      }
+    }
+  },
+  "definitions": {
+    "requester": {
+      "type": "object",
+      "required": ["finallq_company_id"],
+      "properties": {
+        "finallq_company_id": { "type": "string" },
+        "building_id": { "type": "string" },
+        "policy_id": { "type": "string" }
+      }
+    }
+  }
+}
