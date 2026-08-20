@@ -162,7 +162,7 @@ S8·S13에서 FinAllQ가 InsuQ의 `verify-collateral-insurance`를 2차 홉으�
 **2차 홉 질문에 대한 답**: 인증은 중복이 아니고, 인가는 생략 불가하다. FinAllQ가
 자기 토큰으로 InsuQ를 부르면, InsuQ가 검증하는 actor는 **FinAllQ**이지 MaintQ가
 아니다 — 대상 자체가 다르므로 "이중 인증"이 아니다. 그리고 **S8·S13은 actor≠subject인
-사례**다(actor=FinAllQ, subject=MaintQ 소유 건물) — 이는 미결 질문 1번("잠정적으로
+사례**다(actor=FinAllQ, subject=MaintQ 소유 건물) — 이는 1번 항목("잠정적으로
 actor=subject 고정으로 가정한다")의 **첫 반례**이며, 그 가정이 S5~S16 전체가 아니라
 "MaintQ가 직접 호출하는 스킬"에만 한정된다는 걸 보여준다. 실제로 달라지는 건 인증
 강도가 아니라 **권한 범위** — FinAllQ가 받는 grant는 `verify-collateral-insurance`
@@ -199,7 +199,7 @@ MaintQ 직접 호출로만 허용된다.
 
 ## 미결 사항 재정리 (2026-08-21) — 해결됨 3건 · 보류 2건
 
-FinAllQ 조사 §5의 "QMesh 설계 시 답해야 할 질문"을 그대로 인용한다. 5건 중 3건(①②③)은
+FinAllQ 조사 §5의 "QMesh 설계 시 답해야 할 질문"을 옮겨온 것이다. 5건 중 3건(①②③)은
 이미 본문에 결론이 있었고, 2건(④⑤)은 원문에도 "FinAllQ 구현 시 결정"이라 명시돼 있어
 QMesh가 지금 대신 정할 수 없다 — 그 구분을 아래에 라벨로 명확히 한다:
 
