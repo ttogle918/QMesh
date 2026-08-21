@@ -117,3 +117,21 @@ def test_unknown_skill_returns_404():
     resp = client.post("/a2a/skills/not-a-real-skill", json={})
     assert resp.status_code == 404
     assert resp.json()["error"] == "unknown_skill"
+
+
+def test_lookup_clause_malformed_json_body_returns_schema_validation_failed():
+    resp = client.post(
+        "/a2a/skills/lookup-clause",
+        content=b"not valid json",
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert resp.status_code == 400
+    assert resp.json()["error"] == "schema_validation_failed"
+
+
+def test_lookup_clause_non_dict_json_body_returns_schema_validation_failed():
+    resp = client.post("/a2a/skills/lookup-clause", json=["not", "an", "object"])
+
+    assert resp.status_code == 400
+    assert resp.json()["error"] == "schema_validation_failed"

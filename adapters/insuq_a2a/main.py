@@ -38,7 +38,20 @@ async def agent_card_endpoint() -> dict:
 
 @app.post("/a2a/skills/lookup-clause")
 async def lookup_clause(request: Request) -> JSONResponse:
-    body = await request.json()
+    try:
+        body = await request.json()
+    except Exception:
+        body = None
+
+    if not isinstance(body, dict):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "schema_validation_failed",
+                "detail": "request body must be a JSON object",
+                "request_chain_id": None,
+            },
+        )
 
     chain_id_header = request.headers.get("X-Request-Chain-Id")
     body_chain_id = body.get("request_chain_id")
