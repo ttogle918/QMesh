@@ -5,7 +5,7 @@
   "description": "발주 승인 완료된 부품 대금의 출금을 요청한다. 실행이 아니라 요청이며 2단 승인(팀장 -> 재무)을 거친다.",
   "request": {
     "type": "object",
-    "required": ["requester", "request_chain_id", "po_id", "amount", "supplier", "approved_by", "purpose", "error_code"],
+    "required": ["requester", "request_chain_id", "po_id", "amount", "supplier", "approved_by", "purpose", "error_code", "to_account_number"],
     "properties": {
       "requester": { "$ref": "#/definitions/requester" },
       "request_chain_id": { "type": "string" },
@@ -15,7 +15,16 @@
       "supplier": { "type": "string" },
       "approved_by": { "type": "string", "description": "MaintQ 팀장 승인자 ID" },
       "purpose": { "type": "string" },
-      "error_code": { "type": "string" }
+      "error_code": { "type": "string" },
+      "to_account_number": {
+        "type": "string",
+        "description": "PROPOSED(A2A_Q, 2026-08-21): 거래처(수취인) 계좌번호. FinAllQ 계좌번호 형식과 동일.",
+        "pattern": "^[0-9-]{4,20}$"
+      },
+      "to_bank_code": {
+        "type": "string",
+        "description": "PROPOSED(A2A_Q, 2026-08-21): 수취 은행 코드. 선택 — 국내 계좌이체 시 생략 가능."
+      }
     }
   },
   "response": {

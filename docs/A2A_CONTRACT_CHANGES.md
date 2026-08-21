@@ -161,3 +161,51 @@ A2A_Q, 복제하지 않는다" 원칙을 일관되게 유지 중. 별도 수정 
 > 추가로 **13종**이 됐다. 스키마·Agent Card·README 세 목록 모두 함께 갱신돼 여전히
 > 서로 일치한다 — 이 점검 기록 자체는 그 시점 스냅샷이라 숫자만 갱신하고 본문은
 > 남겨둔다.
+
+---
+
+## CP-002 — request-withdrawal: 수취 계좌 필드 추가 (제안)
+
+| | |
+|---|---|
+| **status** | 🟡 **제안** — MaintQ 확인 대기 |
+| **제안자** | A2A_Q (FinAllQ `request-withdrawal` 어댑터 프로토타입 작업 중 발견) |
+| **제안일** | 2026-08-21 |
+| **원본 조사** | FinAllQ `backend-core/.../dto/TransferRequestDto.java` 실측 |
+| **영향 스킬** | `request-withdrawal` |
+| **코드 영향** | 없음 — FinAllQ·MaintQ 양쪽 다 이 스킬 A2A 구현 착수 전 |
+
+### 어떻게 발견했나
+
+FinAllQ `request-withdrawal` 어댑터를 설계하며 실제 이체 API(`POST /api/v1/transfers`)의
+요청 DTO를 대조하다 드러났다. 기존 스키마는 `supplier`(거래처명, 자유 텍스트)만 있고
+계좌번호가 없어, 이 정보만으로는 실제 이체를 호출할 방법이 없다.
+
+### 변경 — `to_account_number`(필수)·`to_bank_code`(선택) 추가
+
+**문제.** `request-withdrawal.json`의 요청 필드에 수취 계좌 정보가 전혀 없다. FinAllQ의
+`TransferRequestDto`는 `toAccountNumber`(필수, 패턴 `^[0-9-]{4,20}$`)와 `toBankCode`(선택)를
+요구하는데 대응하는 A2A 필드가 없었다.
+
+**변경.**
+```jsonc
+"to_account_number": { "type": "string", "pattern": "^[0-9-]{4,20}$" },
+"to_bank_code": { "type": "string" }
+```
+`to_account_number`를 `required`에 추가했다.
+
+**`from_account_id`는 스키마에 넣지 않는다** — "어느 계좌에서 나가는지"는 호출자(actor,
+서비스 계정)에 딸린 정보이지 MaintQ가 지정할 subject가 아니다(`A2A_IDENTITY.md` 결정 1의
+actor/subject 분리 원칙). FinAllQ 쪽 어댑터가 로그인한 계정의 계좌를 자동으로 조회해 채운다.
+
+**호출자에게 필요한 조치** — MaintQ는 발주서(PO)에 거래처 계좌번호 정보를 갖고 있어야
+`request-withdrawal`을 호출할 수 있다.
+
+## 각 프로젝트가 확인할 것 (CP-002)
+
+### MaintQ
+- [ ] 발주서(PO) 데이터에 거래처 계좌번호가 있는지 확인 — 없으면 별도 입력 UI나 거래처
+      마스터 데이터 연동이 선행돼야 한다
+
+### FinAllQ
+- [ ] `to_bank_code` 생략 시(같은 은행 내 이체) `TransferService`가 정상 처리하는지 확인
