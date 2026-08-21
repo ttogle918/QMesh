@@ -45,6 +45,13 @@
       "description": "설비 멸실 사고에 대한 보험금을 약관 기준으로 산정한다. 사람 최종 승인 필요. 유일하게 사고가 시작점(MaintQ가 먼저 요청)인 스킬.",
       "scenario": "S15",
       "schema": "schemas/claim-insurance.json"
+    },
+    {
+      "id": "lookup-clause",
+      "name": "약관 근거 조회",
+      "description": "약관 원문에서 근거 조항을 검색해 인용과 함께 답한다. 계약별 답변이 아니라 약관 일반론만 답한다 — 정책 원장 불필요, A2A 최초 검증용 제안 스킬.",
+      "scenario": "제안 — 선행조건 없음",
+      "schema": "schemas/lookup-clause.json"
     }
   ],
   "notes": [
