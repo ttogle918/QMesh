@@ -67,3 +67,26 @@ async def test_call_qa_raises_upstream_unavailable_on_5xx(httpx_mock):
 
     with pytest.raises(UpstreamUnavailableError):
         await call_qa(question="q", domain=None, product=None, base_url="http://test-insuq")
+
+
+async def test_call_qa_raises_upstream_unavailable_on_read_error(httpx_mock):
+    httpx_mock.add_exception(httpx.ReadError("connection reset"))
+
+    with pytest.raises(UpstreamUnavailableError):
+        await call_qa(question="q", domain=None, product=None, base_url="http://test-insuq")
+
+
+async def test_call_qa_raises_upstream_unavailable_on_4xx(httpx_mock):
+    httpx_mock.add_response(url="http://test-insuq/qa", method="POST", status_code=422)
+
+    with pytest.raises(UpstreamUnavailableError):
+        await call_qa(question="q", domain=None, product=None, base_url="http://test-insuq")
+
+
+async def test_call_qa_raises_upstream_unavailable_on_non_json_response(httpx_mock):
+    httpx_mock.add_response(
+        url="http://test-insuq/qa", method="POST", status_code=200, content=b"not json"
+    )
+
+    with pytest.raises(UpstreamUnavailableError):
+        await call_qa(question="q", domain=None, product=None, base_url="http://test-insuq")

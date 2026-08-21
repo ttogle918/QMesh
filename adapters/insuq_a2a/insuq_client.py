@@ -40,11 +40,18 @@ async def call_qa(
             response = await client.post("/qa", json=payload)
     except httpx.TimeoutException as exc:
         raise UpstreamTimeoutError(str(exc)) from exc
-    except httpx.ConnectError as exc:
+    except httpx.TransportError as exc:
         raise UpstreamUnavailableError(str(exc)) from exc
 
     if response.status_code >= 500:
         raise UpstreamUnavailableError(f"ai-engine returned {response.status_code}")
 
-    response.raise_for_status()
-    return response.json()
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        raise UpstreamUnavailableError(str(exc)) from exc
+
+    try:
+        return response.json()
+    except ValueError as exc:
+        raise UpstreamUnavailableError(f"ai-engine returned a non-JSON response: {exc}") from exc

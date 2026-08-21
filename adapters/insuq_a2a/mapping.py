@@ -34,6 +34,7 @@ def map_qa_response(qa_response: dict) -> dict:
         "status": "completed",
         "answer": qa_response.get("answer"),
         "verdict": qa_response.get("verdict"),
+        "confirm_required": qa_response.get("confirm_required", []),
         "evidence": formatted_evidence,
     }
 
@@ -41,12 +42,13 @@ def map_qa_response(qa_response: dict) -> dict:
 def _format_evidence(item: dict) -> str:
     """"{product} {policy_part} {article_no}[ {clause_no}][, p.{page}]" 형식 문자열 조립.
 
-    clause_no·page 가 없으면(None) 그 토막을 통째로 생략한다 — "p.None"이 나가면
-    인용 신뢰가 무너진다.
+    clause_no·page 가 없으면 그 토막을 통째로 생략한다 — "p.None"이 나가면 인용 신뢰가
+    무너진다. clause_no(str|None)는 빈 문자열도 "없음"으로 취급하므로 진리값 검사를
+    쓴다. page(int|None)는 0이 유효한 값일 수 있으므로 `is not None`으로 구분한다.
     """
     text = f"{item['product']} {item['policy_part']} {item['article_no']}"
     clause_no = item.get("clause_no")
-    if clause_no is not None:
+    if clause_no:
         text += f" {clause_no}"
     page = item.get("page")
     if page is not None:

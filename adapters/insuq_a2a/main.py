@@ -16,17 +16,9 @@ from pydantic import ValidationError
 from adapters.insuq_a2a.agent_card import load_agent_card
 from adapters.insuq_a2a.insuq_client import UpstreamTimeoutError, UpstreamUnavailableError, call_qa
 from adapters.insuq_a2a.mapping import map_qa_response
-from adapters.insuq_a2a.schemas import LookupClauseRequest
+from adapters.insuq_a2a.schemas import LookupClauseRequest, LookupClauseResponse
 
 INSUQ_BASE_URL = os.environ.get("INSUQ_AI_ENGINE_BASE_URL", "http://localhost:8000")
-
-KNOWN_SKILL_IDS = [
-    "advise-policy-renewal",
-    "verify-collateral-insurance",
-    "notify-asset-change",
-    "notify-risk-change",
-    "claim-insurance",
-]
 
 app = FastAPI(title="InsuQ A2A Adapter (prototype)")
 
@@ -40,7 +32,7 @@ async def agent_card_endpoint() -> dict:
 async def lookup_clause(request: Request) -> JSONResponse:
     try:
         body = await request.json()
-    except Exception:
+    except (ValueError, UnicodeDecodeError):
         body = None
 
     if not isinstance(body, dict):
@@ -104,12 +96,14 @@ async def lookup_clause(request: Request) -> JSONResponse:
         )
 
     mapped = map_qa_response(qa_response)
-    return JSONResponse(status_code=200, content=mapped)
+    validated = LookupClauseResponse.model_validate(mapped)
+    return JSONResponse(status_code=200, content=validated.model_dump(exclude_none=True))
 
 
 @app.post("/a2a/skills/{skill_id}")
 async def unimplemented_skill(skill_id: str) -> JSONResponse:
-    if skill_id not in KNOWN_SKILL_IDS:
+    known_skill_ids = {skill["id"] for skill in load_agent_card()["skills"]}
+    if skill_id not in known_skill_ids:
         return JSONResponse(
             status_code=404,
             content={
