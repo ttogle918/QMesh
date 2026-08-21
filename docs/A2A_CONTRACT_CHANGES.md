@@ -155,3 +155,9 @@ InsuQ는 판정을 **가능성 높음 / 낮음 / 판단 유보** 3단계로 고�
 스키마 12종 = Agent Card 스킬 id 12종 = README.md 목록 12종 — 전수 대조 완료, drift 없음.
 `docs/ref_insuq/`·`docs/ref_maintq/`·`docs/ref_finallq/` 세 인덱스 문서 모두 "원본은
 A2A_Q, 복제하지 않는다" 원칙을 일관되게 유지 중. 별도 수정 없음.
+
+> **갱신 (2026-08-21, 같은 날 나중 시점)** — 위 "12종" 카운트는 InsuQ `lookup-clause`
+> 스킬(신규 제안, `docs/superpowers/specs/2026-08-21-insuq-lookup-clause-adapter-design.md`)
+> 추가로 **13종**이 됐다. 스키마·Agent Card·README 세 목록 모두 함께 갱신돼 여전히
+> 서로 일치한다 — 이 점검 기록 자체는 그 시점 스냅샷이라 숫자만 갱신하고 본문은
+> 남겨둔다.

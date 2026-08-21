@@ -52,11 +52,12 @@ InsuQ 레포는 이번 라운드에서 **읽기만** 한다 — 어댑터는 Ins
 5. `QaResponse`를 아래 규칙으로 A2A 응답에 매핑:
    - `needs_clarification == true` → `status: "input-required"`,
      `confirm_required: clarify_questions`
-   - 그 외 `evidence`가 빈 배열 → `status: "rejected"`,
-     `rejection_reason: "no_evidence_found"`, `message: "약관에서 확인 불가"`
-   - 그 외 → `status: "completed"`, `answer`·`verdict` 그대로 전달, `evidence`를
-     `{product} {policy_part} {article_no}[ {clause_no}][, p.{page}]` 형식 문자열
-     배열로 조립(InsuQ 인용 규약과 동일 — 이미 CP-001로 스키마 `pattern`에 고정돼 있음)
+   - 그 외 `evidence`가 빈 배열 → `status: "rejected"`, `rejection_reason: "no_evidence_found"`
+     (스키마에 `message` 필드는 없다 — 거부 사유는 `rejection_reason`으로 전달)
+   - 그 외 → `status: "completed"`, `answer`·`verdict`·`confirm_required`(있으면) 그대로
+     전달, `evidence`를 `{product} {policy_part} {article_no}[ {clause_no}][, p.{page}]`
+     형식 문자열 배열로 조립(InsuQ 인용 규약과 동일 — 이미 CP-001로 스키마 `pattern`에
+     고정돼 있음)
 6. 인증(§3의 `oauth2-mock`)·`Idempotency-Key`(조회 스킬이라 선택, 스펙 §7)는 이번
    프로토타입에서는 **받되 검증하지 않는다** — M1 단계 목업 수준으로 맞춘다. 검증 로직
    추가는 후속 스코프.

@@ -56,7 +56,7 @@ QMesh/
 │   │   ├── finallq.json       #   금융/은행/증권 에이전트 (:9001)
 │   │   ├── insuq.json         #   보험 심사/약관 에이전트 (:9002)
 │   │   └── maintq.json        #   제조 설비보전 에이전트 (:9003)
-│   └── schemas/               # Task 요청/응답 표준 JSON Schema (12종)
+│   └── schemas/               # Task 요청/응답 표준 JSON Schema (13종)
 │       ├── request-withdrawal.json            # [S5] 출금 요청 (2단 승인)
 │       ├── advise-hedge.json                  # [S6] 환헤지/자산운용 상담
 │       ├── advise-policy-renewal.json         # [S7] 화재보험 갱신 (고장이력 연계)
@@ -68,11 +68,12 @@ QMesh/
 │       ├── claim-insurance.json               # [S14] 보험금 청구
 │       ├── notify-asset-change.json           # [S11] 자산 변동 통지
 │       ├── notify-risk-change.json            # [S12] 리스크 변동 통지
-│       └── request-settlement.json            # 정산 요청
-└── adapters/                  # 각 레포에 얹을 A2A 어댑터 견본 (Templates)
-    ├── finallq_a2a.py
-    ├── insuq_a2a.py
-    └── maintq_a2a.py
+│       ├── request-settlement.json            # 정산 요청
+│       └── lookup-clause.json                 # 약관 근거 조회 (신규 제안, 선행조건 없음)
+└── adapters/                  # 각 레포에 얹을 A2A 어댑터 (Templates + 프로토타입)
+    ├── finallq_a2a.py         #   템플릿(미착수)
+    ├── insuq_a2a/             #   InsuQ lookup-clause 프로토타입 (A2A_Q 안에서 구현, :9102)
+    └── maintq_a2a.py          #   템플릿(미착수)
 ```
 
 ---
