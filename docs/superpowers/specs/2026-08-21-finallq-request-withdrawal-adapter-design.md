@@ -82,6 +82,14 @@ FinAllQ 레포는 이번 라운드에서 **읽기만** 한다 — 어댑터는 F
 - FinAllQ의 `/approve`·`/reject`는 호출하지 않는다 — A2A 관통 원칙("AI는 요청까지만, 실행은
   사람 승인 뒤")과 일치하며, 재무 담당자는 FinAllQ 자체 화면에서 승인한다.
 
+**하지 않는 것 — 멱등성(Idempotency-Key)**:
+- `request-withdrawal`은 돈이 움직이는 스킬인데도 이번 프로토타입은 `Idempotency-Key`를
+  받지도 확인하지도 않는다(InsuQ 어댑터와 같은 수준의 M1 목업). **알려진 위험**: 504
+  타임아웃 응답을 받은 호출자가 재시도하면, 실제로는 FinAllQ에 이미 이체 요청이 생성된
+  상태에서 중복 요청이 또 생겨 재무 담당자 결재함에 같은 요청이 두 번 보일 수 있다. 실제
+  구현 단계에서는 `Idempotency-Key` 필수화 + 같은 키 재요청 시 최초 응답 재생(InsuQ
+  `A2A_API_SPEC.md` §7과 동일한 패턴)이 선행돼야 한다.
+
 ### ③ 파일 구조
 ```
 adapters/finallq_a2a/

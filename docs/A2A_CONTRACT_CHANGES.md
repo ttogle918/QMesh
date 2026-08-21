@@ -173,7 +173,7 @@ A2A_Q, 복제하지 않는다" 원칙을 일관되게 유지 중. 별도 수정 
 | **제안일** | 2026-08-21 |
 | **원본 조사** | FinAllQ `backend-core/.../dto/TransferRequestDto.java` 실측 |
 | **영향 스킬** | `request-withdrawal` |
-| **코드 영향** | 없음 — FinAllQ·MaintQ 양쪽 다 이 스킬 A2A 구현 착수 전 |
+| **코드 영향** | FinAllQ·MaintQ 양쪽 다 착수 전이라 없음. **단, A2A_Q 자체 `adapters/finallq_a2a/` 프로토타입은 이미 이 필드에 의존한다** — CP-002가 반려·수정되면 그 어댑터의 `schemas.py`·`main.py`도 함께 바뀌어야 한다 |
 
 ### 어떻게 발견했나
 

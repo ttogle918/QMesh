@@ -71,7 +71,7 @@ QMesh/
 │       ├── request-settlement.json            # 정산 요청
 │       └── lookup-clause.json                 # 약관 근거 조회 (신규 제안, 선행조건 없음)
 └── adapters/                  # 각 레포에 얹을 A2A 어댑터 (Templates + 프로토타입)
-    ├── finallq_a2a.py         #   템플릿(미착수)
+    ├── finallq_a2a/           #   FinAllQ request-withdrawal 프로토타입 (A2A_Q 안에서 구현, :9101)
     ├── insuq_a2a/             #   InsuQ lookup-clause 프로토타입 (A2A_Q 안에서 구현, :9102)
     └── maintq_a2a.py          #   템플릿(미착수)
 ```
