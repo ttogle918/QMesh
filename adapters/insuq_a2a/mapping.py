@@ -46,7 +46,7 @@ def _format_evidence(item: dict) -> str:
     """
     text = f"{item['product']} {item['policy_part']} {item['article_no']}"
     clause_no = item.get("clause_no")
-    if clause_no:
+    if clause_no is not None:
         text += f" {clause_no}"
     page = item.get("page")
     if page is not None:
