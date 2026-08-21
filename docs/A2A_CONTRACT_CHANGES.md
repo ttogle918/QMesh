@@ -204,8 +204,8 @@ actor/subject 분리 원칙). FinAllQ 쪽 어댑터가 로그인한 계정의 �
 ## 각 프로젝트가 확인할 것 (CP-002)
 
 ### MaintQ
-- [ ] 발주서(PO) 데이터에 거래처 계좌번호가 있는지 확인 — 없으면 별도 입력 UI나 거래처
-      마스터 데이터 연동이 선행돼야 한다
+- [x] 발주서(PO) 및 `suppliers` 테이블 실측 확인 완료 (2026-08-21, `docs/superpowers/specs/2026-08-21-maintq-a2a-outbound-client-design.md`) — `suppliers` 테이블(`supplier_id`, `name`, `contact`)에 `account_number` 및 `bank_code` 컬럼이 없음이 확인됨. MaintQ 레포에서 `suppliers.account_number` 컬럼 추가(D-번호 신설 마이그레이션) 및 시드 갱신 선행 필요.
 
 ### FinAllQ
 - [ ] `to_bank_code` 생략 시(같은 은행 내 이체) `TransferService`가 정상 처리하는지 확인
+

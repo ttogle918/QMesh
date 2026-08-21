@@ -18,6 +18,7 @@ client** 역할이다. 예외는 S15 — InsuQ 응답을 받은 뒤 MaintQ가 Fi
 | 트리거 (이 레포 내부 이벤트) | 대상 | 스킬 | 스키마 |
 |---|---|---|---|
 | 팀장 승인 완료 (`po.py` submit→approved) | FinAllQ | `request-withdrawal` | `A2A_Q/docs/schemas/request-withdrawal.json` |
+| 약관 근거 질의 (사용자 화면/API 질의) | InsuQ | `lookup-clause` | `A2A_Q/docs/schemas/lookup-clause.json` |
 | 환헤지 상담 요청(수동 트리거, 향후) | FinAllQ | `advise-hedge` | `A2A_Q/docs/schemas/advise-hedge.json` |
 | 화재보험 갱신 상담 요청 | InsuQ | `advise-policy-renewal` | `A2A_Q/docs/schemas/advise-policy-renewal.json` |
 | 담보 대출 상담 요청 | FinAllQ (→ 내부 2차홉 InsuQ) | `assess-loan` | `A2A_Q/docs/schemas/assess-loan.json` |
@@ -27,6 +28,10 @@ client** 역할이다. 예외는 S15 — InsuQ 응답을 받은 뒤 MaintQ가 Fi
 | 신규 설비 등재 → 위험 프로파일 재계산 | InsuQ | `notify-risk-change` | `A2A_Q/docs/schemas/notify-risk-change.json` |
 | 설비 화재 멸실 사고 | InsuQ (응답 후 FinAllQ 2차 호출) | `claim-insurance` → `advise-replacement-financing` | `A2A_Q/docs/schemas/claim-insurance.json`, `A2A_Q/docs/schemas/advise-replacement-financing.json` |
 | 설비 취득 예산 확정 | FinAllQ | `advise-financing` | `A2A_Q/docs/schemas/advise-financing.json` |
+
+> 📌 **아웃바운드 클라이언트 아키텍처 상세**: `docs/superpowers/specs/2026-08-21-maintq-a2a-outbound-client-design.md` 참조.
+> 5단계 파이프라인(트리거 → partner_links → payload 조립 → `call_skill()`/`build_auth_header()` → 응답/traces 기록)으로 호출부를 격리하며, `suppliers.account_number` 갭 해소 후 `request-withdrawal` 실호출이 가동된다.
+
 
 ## 신원은 두 층이다 — 토큰(actor) + payload(subject)
 
