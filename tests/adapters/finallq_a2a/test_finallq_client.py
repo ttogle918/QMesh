@@ -5,6 +5,7 @@ import pytest
 
 from adapters.finallq_a2a.finallq_client import (
     AuthExpiredError,
+    ForbiddenError,
     NoAccountError,
     UpstreamTimeoutError,
     UpstreamUnavailableError,
@@ -44,6 +45,13 @@ async def test_get_first_account_id_raises_auth_expired_on_401(httpx_mock):
 
     with pytest.raises(AuthExpiredError):
         await get_first_account_id("jwt-expired", base_url="http://test-finallq")
+
+
+async def test_get_first_account_id_raises_forbidden_on_403(httpx_mock):
+    httpx_mock.add_response(url="http://test-finallq/api/v1/accounts?page=0", method="GET", status_code=403)
+
+    with pytest.raises(ForbiddenError):
+        await get_first_account_id("jwt-abc", base_url="http://test-finallq")
 
 
 async def test_get_first_account_id_raises_upstream_unavailable_on_connect_error(httpx_mock):
@@ -106,6 +114,16 @@ async def test_request_transfer_raises_auth_expired_on_401(httpx_mock):
     with pytest.raises(AuthExpiredError):
         await request_transfer(
             token="jwt-expired", from_account_id=42, amount=1000, to_account_number="900-000-001",
+            to_bank_code=None, memo="m", base_url="http://test-finallq",
+        )
+
+
+async def test_request_transfer_raises_forbidden_on_403(httpx_mock):
+    httpx_mock.add_response(url="http://test-finallq/api/v1/transfers", method="POST", status_code=403)
+
+    with pytest.raises(ForbiddenError):
+        await request_transfer(
+            token="jwt-abc", from_account_id=42, amount=1000, to_account_number="900-000-001",
             to_bank_code=None, memo="m", base_url="http://test-finallq",
         )
 

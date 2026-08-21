@@ -1,9 +1,11 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from adapters.finallq_a2a import main
 from adapters.finallq_a2a.auth import LoginFailedError
 from adapters.finallq_a2a.finallq_client import (
     AuthExpiredError,
+    ForbiddenError,
     NoAccountError,
     UpstreamTimeoutError,
     UpstreamUnavailableError,
@@ -155,6 +157,21 @@ def test_request_withdrawal_no_account(monkeypatch):
     assert resp.json()["error"] == "upstream_unavailable"
 
 
+def test_request_withdrawal_forbidden(monkeypatch):
+    async def fake_get_token(cache, email, password, base_url):
+        return "jwt-abc"
+
+    async def fake_get_first_account_id(token, base_url, timeout=10.0):
+        raise ForbiddenError("no permission")
+
+    monkeypatch.setattr(main, "get_token", fake_get_token)
+    monkeypatch.setattr(main, "get_first_account_id", fake_get_first_account_id)
+
+    resp = client.post("/a2a/skills/request-withdrawal", json=_valid_body(), headers=_headers())
+    assert resp.status_code == 403
+    assert resp.json()["error"] == "forbidden"
+
+
 def test_request_withdrawal_upstream_unavailable(monkeypatch):
     async def fake_get_token(cache, email, password, base_url):
         return "jwt-abc"
@@ -223,13 +240,59 @@ def test_request_withdrawal_unknown_finallq_status_maps_to_upstream_unavailable(
     assert resp.json()["error"] == "upstream_unavailable"
 
 
-def test_unimplemented_known_skill_returns_501():
-    resp = client.post("/a2a/skills/assess-loan", json={})
+def test_request_withdrawal_truncates_purpose_to_100_chars_for_memo(monkeypatch):
+    captured = {}
+
+    async def fake_get_token(cache, email, password, base_url):
+        return "jwt-abc"
+
+    async def fake_get_first_account_id(token, base_url, timeout=10.0):
+        return 42
+
+    async def fake_request_transfer(**kwargs):
+        captured.update(kwargs)
+        return {"requestId": 1, "status": "PENDING", "message": None, "requestedAt": None}
+
+    monkeypatch.setattr(main, "get_token", fake_get_token)
+    monkeypatch.setattr(main, "get_first_account_id", fake_get_first_account_id)
+    monkeypatch.setattr(main, "request_transfer", fake_request_transfer)
+
+    long_purpose = "a" * 150
+    resp = client.post(
+        "/a2a/skills/request-withdrawal", json=_valid_body(purpose=long_purpose), headers=_headers()
+    )
+
+    assert resp.status_code == 200
+    assert captured["memo"] == "a" * 100
+    assert len(captured["memo"]) == 100
+
+
+@pytest.mark.parametrize(
+    "skill_id",
+    [
+        "advise-hedge",
+        "assess-loan",
+        "request-settlement",
+        "assess-used-equipment-loan",
+        "advise-financing",
+        "advise-replacement-financing",
+    ],
+)
+def test_unimplemented_known_skills_return_501(skill_id):
+    resp = client.post(f"/a2a/skills/{skill_id}", json={}, headers={"X-Request-Chain-Id": "chain-99"})
     assert resp.status_code == 501
     assert resp.json()["error"] == "not_implemented"
+    assert resp.json()["request_chain_id"] == "chain-99"
 
 
 def test_unknown_skill_returns_404():
-    resp = client.post("/a2a/skills/not-a-real-skill", json={})
+    resp = client.post("/a2a/skills/not-a-real-skill", json={}, headers={"X-Request-Chain-Id": "chain-99"})
     assert resp.status_code == 404
     assert resp.json()["error"] == "unknown_skill"
+    assert resp.json()["request_chain_id"] == "chain-99"
+
+
+def test_unknown_skill_returns_404_with_no_chain_id_header():
+    resp = client.post("/a2a/skills/not-a-real-skill", json={})
+    assert resp.status_code == 404
+    assert resp.json()["request_chain_id"] is None

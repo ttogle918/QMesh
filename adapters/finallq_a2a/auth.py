@@ -15,6 +15,10 @@ class LoginFailedError(Exception):
     """서비스 계정 로그인 자체가 실패했을 때 (자격증명 오류, 연결 실패 등)."""
 
 
+# 동시 요청 간 경쟁 조건이 있다 — 캐시가 갱신 중일 때 다른 요청이 만료된 값을 읽고
+# clear() 할 수 있다. 정확성은 깨지지 않는다(어떤 토큰이 발급되든 유효하다) — 최악의
+# 경우 로그인이 한 번 더 일어날 뿐이다. 프로토타입 규모에서는 asyncio.Lock을 넣는
+# 복잡도가 이 이득보다 크다고 판단해 의도적으로 넣지 않았다.
 class TokenCache:
     def __init__(self) -> None:
         self._token: str | None = None

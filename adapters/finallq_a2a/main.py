@@ -17,6 +17,7 @@ from adapters.finallq_a2a.agent_card import load_agent_card
 from adapters.finallq_a2a.auth import LoginFailedError, TokenCache, get_token
 from adapters.finallq_a2a.finallq_client import (
     AuthExpiredError,
+    ForbiddenError,
     NoAccountError,
     UpstreamTimeoutError,
     UpstreamUnavailableError,
@@ -48,7 +49,7 @@ async def _do_transfer(parsed: RequestWithdrawalRequest, token: str) -> dict:
         amount=parsed.amount,
         to_account_number=parsed.to_account_number,
         to_bank_code=parsed.to_bank_code,
-        memo=parsed.purpose,
+        memo=parsed.purpose[:100],
         base_url=FINALLQ_BASE_URL,
     )
 
@@ -125,6 +126,11 @@ async def request_withdrawal(request: Request) -> JSONResponse:
             status_code=502,
             content={"error": "upstream_unavailable", "detail": str(exc), "request_chain_id": parsed.request_chain_id},
         )
+    except ForbiddenError as exc:
+        return JSONResponse(
+            status_code=403,
+            content={"error": "forbidden", "detail": str(exc), "request_chain_id": parsed.request_chain_id},
+        )
     except UpstreamUnavailableError as exc:
         return JSONResponse(
             status_code=502,
@@ -154,14 +160,23 @@ async def request_withdrawal(request: Request) -> JSONResponse:
 
 
 @app.post("/a2a/skills/{skill_id}")
-async def unimplemented_skill(skill_id: str) -> JSONResponse:
+async def unimplemented_skill(skill_id: str, request: Request) -> JSONResponse:
+    chain_id = request.headers.get("X-Request-Chain-Id")
     known_skill_ids = {skill["id"] for skill in load_agent_card()["skills"]}
     if skill_id not in known_skill_ids:
         return JSONResponse(
             status_code=404,
-            content={"error": "unknown_skill", "detail": f"'{skill_id}' is not declared in the Agent Card"},
+            content={
+                "error": "unknown_skill",
+                "detail": f"'{skill_id}' is not declared in the Agent Card",
+                "request_chain_id": chain_id,
+            },
         )
     return JSONResponse(
         status_code=501,
-        content={"error": "not_implemented", "detail": f"'{skill_id}' is not implemented in this prototype adapter"},
+        content={
+            "error": "not_implemented",
+            "detail": f"'{skill_id}' is not implemented in this prototype adapter",
+            "request_chain_id": chain_id,
+        },
     )

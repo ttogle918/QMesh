@@ -30,6 +30,12 @@ class AuthExpiredError(Exception):
     """토큰이 만료/무효(401)일 때 — 호출부가 재로그인 후 재시도해야 한다."""
 
 
+class ForbiddenError(Exception):
+    """FinAllQ가 인증은 통과했으나 권한이 없다고 응답했을 때 (403) — 서비스 계정의
+    역할/권한 설정 문제일 가능성이 높다. 502(upstream_unavailable)로 뭉뚱그리면
+    "FinAllQ가 죽었나" 쪽으로 디버깅이 잘못 유도된다."""
+
+
 async def get_first_account_id(token: str, base_url: str, timeout: float = 10.0) -> int:
     """GET /api/v1/accounts?page=0 을 호출해 첫 번째 계좌의 accountId를 반환한다."""
     try:
@@ -46,6 +52,8 @@ async def get_first_account_id(token: str, base_url: str, timeout: float = 10.0)
 
     if response.status_code == 401:
         raise AuthExpiredError("FinAllQ rejected the access token")
+    if response.status_code == 403:
+        raise ForbiddenError("FinAllQ denied the service account permission for this action")
     if response.status_code >= 500:
         raise UpstreamUnavailableError(f"FinAllQ returned {response.status_code}")
 
@@ -99,6 +107,8 @@ async def request_transfer(
 
     if response.status_code == 401:
         raise AuthExpiredError("FinAllQ rejected the access token")
+    if response.status_code == 403:
+        raise ForbiddenError("FinAllQ denied the service account permission for this action")
     if response.status_code == 400:
         raise ValueError(f"FinAllQ rejected the transfer request: {response.text}")
     if response.status_code >= 500:

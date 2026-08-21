@@ -113,10 +113,32 @@ def test_unimplemented_known_skill_returns_501():
     assert resp.json()["error"] == "not_implemented"
 
 
+def test_unimplemented_known_skill_returns_501_with_chain_id():
+    resp = client.post(
+        "/a2a/skills/verify-collateral-insurance", json={}, headers={"X-Request-Chain-Id": "chain-99"}
+    )
+    assert resp.status_code == 501
+    assert resp.json()["request_chain_id"] == "chain-99"
+
+
 def test_unknown_skill_returns_404():
     resp = client.post("/a2a/skills/not-a-real-skill", json={})
     assert resp.status_code == 404
     assert resp.json()["error"] == "unknown_skill"
+
+
+def test_unknown_skill_returns_404_with_chain_id():
+    resp = client.post(
+        "/a2a/skills/not-a-real-skill", json={}, headers={"X-Request-Chain-Id": "chain-99"}
+    )
+    assert resp.status_code == 404
+    assert resp.json()["request_chain_id"] == "chain-99"
+
+
+def test_unknown_skill_returns_404_with_no_chain_id_header():
+    resp = client.post("/a2a/skills/not-a-real-skill", json={})
+    assert resp.status_code == 404
+    assert resp.json()["request_chain_id"] is None
 
 
 def test_lookup_clause_malformed_json_body_returns_schema_validation_failed():

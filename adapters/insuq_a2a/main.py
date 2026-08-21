@@ -101,7 +101,8 @@ async def lookup_clause(request: Request) -> JSONResponse:
 
 
 @app.post("/a2a/skills/{skill_id}")
-async def unimplemented_skill(skill_id: str) -> JSONResponse:
+async def unimplemented_skill(skill_id: str, request: Request) -> JSONResponse:
+    chain_id = request.headers.get("X-Request-Chain-Id")
     known_skill_ids = {skill["id"] for skill in load_agent_card()["skills"]}
     if skill_id not in known_skill_ids:
         return JSONResponse(
@@ -109,6 +110,7 @@ async def unimplemented_skill(skill_id: str) -> JSONResponse:
             content={
                 "error": "unknown_skill",
                 "detail": f"'{skill_id}' is not declared in the Agent Card",
+                "request_chain_id": chain_id,
             },
         )
     return JSONResponse(
@@ -116,5 +118,6 @@ async def unimplemented_skill(skill_id: str) -> JSONResponse:
         content={
             "error": "not_implemented",
             "detail": f"'{skill_id}' is not implemented in this prototype adapter",
+            "request_chain_id": chain_id,
         },
     )

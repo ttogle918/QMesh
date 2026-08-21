@@ -27,7 +27,7 @@ class RequestWithdrawalRequest(BaseModel):
     approved_by: str
     purpose: str
     error_code: str
-    to_account_number: str
+    to_account_number: str = Field(pattern=r"^[0-9-]{4,20}$")
     to_bank_code: str | None = None
 
 

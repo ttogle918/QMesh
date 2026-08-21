@@ -55,3 +55,17 @@ def test_request_withdrawal_response_defaults():
     resp = RequestWithdrawalResponse(status="input-required")
     assert resp.fds_check is None
     assert resp.req_id is None
+
+
+def test_request_withdrawal_rejects_malformed_account_number():
+    kwargs = _valid_request_kwargs()
+    kwargs["to_account_number"] = "not-a-valid-account-number-format!!"
+    with pytest.raises(ValidationError):
+        RequestWithdrawalRequest(**kwargs)
+
+
+def test_request_withdrawal_accepts_valid_account_number_formats():
+    for valid_number in ["900-000-001", "1234", "12345678901234567890"]:
+        kwargs = _valid_request_kwargs()
+        kwargs["to_account_number"] = valid_number
+        RequestWithdrawalRequest(**kwargs)  # should not raise
