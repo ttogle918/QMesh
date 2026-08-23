@@ -24,12 +24,21 @@ from adapters.finallq_a2a.finallq_client import (
     get_first_account_id,
     request_transfer,
 )
-from adapters.finallq_a2a.mapping import map_transfer_response
-from adapters.finallq_a2a.schemas import RequestWithdrawalRequest, RequestWithdrawalResponse
+from adapters.finallq_a2a.insuq_client import call_verify_collateral_insurance
+from adapters.finallq_a2a.insuq_client import UpstreamTimeoutError as InsuqUpstreamTimeoutError
+from adapters.finallq_a2a.insuq_client import UpstreamUnavailableError as InsuqUpstreamUnavailableError
+from adapters.finallq_a2a.mapping import map_loan_decision, map_transfer_response
+from adapters.finallq_a2a.schemas import (
+    AssessLoanRequest,
+    AssessLoanResponse,
+    RequestWithdrawalRequest,
+    RequestWithdrawalResponse,
+)
 
 FINALLQ_BASE_URL = os.environ.get("FINALLQ_BASE_URL", "http://localhost:8080")
 FINALLQ_SERVICE_EMAIL = os.environ.get("FINALLQ_SERVICE_EMAIL", "")
 FINALLQ_SERVICE_PASSWORD = os.environ.get("FINALLQ_SERVICE_PASSWORD", "")
+INSUQ_A2A_BASE_URL = os.environ.get("INSUQ_A2A_BASE_URL", "http://localhost:9102")
 
 _token_cache = TokenCache()
 
@@ -156,6 +165,71 @@ async def request_withdrawal(request: Request) -> JSONResponse:
         )
 
     validated = RequestWithdrawalResponse.model_validate(mapped)
+    return JSONResponse(status_code=200, content=validated.model_dump(exclude_none=True))
+
+
+@app.post("/a2a/skills/assess-loan")
+async def assess_loan(request: Request) -> JSONResponse:
+    try:
+        body = await request.json()
+    except (ValueError, UnicodeDecodeError):
+        body = None
+
+    if not isinstance(body, dict):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "schema_validation_failed",
+                "detail": "request body must be a JSON object",
+                "request_chain_id": None,
+            },
+        )
+
+    chain_id_header = request.headers.get("X-Request-Chain-Id")
+    body_chain_id = body.get("request_chain_id")
+    if chain_id_header is not None and chain_id_header != body_chain_id:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "chain_id_mismatch",
+                "detail": "X-Request-Chain-Id header does not match request_chain_id in body",
+                "request_chain_id": body_chain_id,
+            },
+        )
+
+    try:
+        parsed = AssessLoanRequest.model_validate(body)
+    except ValidationError as exc:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "schema_validation_failed",
+                "detail": str(exc),
+                "request_chain_id": body_chain_id,
+            },
+        )
+
+    try:
+        insuq_response = await call_verify_collateral_insurance(
+            building_id=parsed.collateral_building_id,
+            required_coverage=parsed.loan_amount,
+            request_chain_id=parsed.request_chain_id,
+            finallq_company_id=parsed.requester.finallq_company_id,
+            base_url=INSUQ_A2A_BASE_URL,
+        )
+    except InsuqUpstreamUnavailableError as exc:
+        return JSONResponse(
+            status_code=502,
+            content={"error": "upstream_unavailable", "detail": str(exc), "request_chain_id": parsed.request_chain_id},
+        )
+    except InsuqUpstreamTimeoutError as exc:
+        return JSONResponse(
+            status_code=504,
+            content={"error": "upstream_timeout", "detail": str(exc), "request_chain_id": parsed.request_chain_id},
+        )
+
+    mapped = map_loan_decision(insuq_response, parsed.loan_amount)
+    validated = AssessLoanResponse.model_validate({"status": "completed", **mapped})
     return JSONResponse(status_code=200, content=validated.model_dump(exclude_none=True))
 
 

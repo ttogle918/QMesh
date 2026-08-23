@@ -271,7 +271,6 @@ def test_request_withdrawal_truncates_purpose_to_100_chars_for_memo(monkeypatch)
     "skill_id",
     [
         "advise-hedge",
-        "assess-loan",
         "request-settlement",
         "assess-used-equipment-loan",
         "advise-financing",
@@ -296,3 +295,131 @@ def test_unknown_skill_returns_404_with_no_chain_id_header():
     resp = client.post("/a2a/skills/not-a-real-skill", json={})
     assert resp.status_code == 404
     assert resp.json()["request_chain_id"] is None
+
+
+def _valid_assess_loan_body(**overrides):
+    body = {
+        "requester": {"finallq_company_id": "FQ-1043"},
+        "request_chain_id": "chain-loan-1",
+        "loan_amount": 500000000,
+        "purpose": "노후 설비 교체",
+        "collateral_building_id": "BLD-A",
+    }
+    body.update(overrides)
+    return body
+
+
+def test_assess_loan_approved(monkeypatch):
+    async def fake_call(**kwargs):
+        return {"status": "completed", "policy_valid": True, "coverage_amount": 500000000, "sufficient": True, "evidence": []}
+
+    monkeypatch.setattr(main, "call_verify_collateral_insurance", fake_call)
+
+    resp = client.post(
+        "/a2a/skills/assess-loan", json=_valid_assess_loan_body(), headers=_headers("chain-loan-1")
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "completed"
+    assert data["decision"] == "approved"
+    assert data["collateral_check"]["coverage_amount"] == 500000000
+
+
+def test_assess_loan_conditional(monkeypatch):
+    async def fake_call(**kwargs):
+        return {"status": "completed", "policy_valid": True, "coverage_amount": 300000000, "sufficient": False, "evidence": []}
+
+    monkeypatch.setattr(main, "call_verify_collateral_insurance", fake_call)
+
+    resp = client.post(
+        "/a2a/skills/assess-loan", json=_valid_assess_loan_body(), headers=_headers("chain-loan-1")
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["decision"] == "conditional"
+    assert data["condition_note"] == "보험 300000000→500000000 증액 필요"
+
+
+def test_assess_loan_rejected(monkeypatch):
+    async def fake_call(**kwargs):
+        return {"status": "rejected", "rejection_reason": "policy_not_found", "policy_valid": False, "coverage_amount": 0, "evidence": []}
+
+    monkeypatch.setattr(main, "call_verify_collateral_insurance", fake_call)
+
+    resp = client.post(
+        "/a2a/skills/assess-loan", json=_valid_assess_loan_body(), headers=_headers("chain-loan-1")
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["decision"] == "rejected"
+    assert data["condition_note"] == "policy_not_found"
+
+
+def test_assess_loan_chain_id_mismatch():
+    resp = client.post(
+        "/a2a/skills/assess-loan", json=_valid_assess_loan_body(), headers=_headers("chain-DIFFERENT")
+    )
+    assert resp.status_code == 400
+    assert resp.json()["error"] == "chain_id_mismatch"
+
+
+def test_assess_loan_schema_validation_failed():
+    body = _valid_assess_loan_body()
+    del body["collateral_building_id"]
+    resp = client.post("/a2a/skills/assess-loan", json=body, headers=_headers("chain-loan-1"))
+    assert resp.status_code == 400
+    assert resp.json()["error"] == "schema_validation_failed"
+
+
+def test_assess_loan_insuq_upstream_unavailable(monkeypatch):
+    from adapters.finallq_a2a.insuq_client import UpstreamUnavailableError as InsuqUpstreamUnavailableError
+
+    async def fake_call(**kwargs):
+        raise InsuqUpstreamUnavailableError("connection refused")
+
+    monkeypatch.setattr(main, "call_verify_collateral_insurance", fake_call)
+
+    resp = client.post(
+        "/a2a/skills/assess-loan", json=_valid_assess_loan_body(), headers=_headers("chain-loan-1")
+    )
+    assert resp.status_code == 502
+    assert resp.json()["error"] == "upstream_unavailable"
+
+
+def test_assess_loan_insuq_upstream_timeout(monkeypatch):
+    from adapters.finallq_a2a.insuq_client import UpstreamTimeoutError as InsuqUpstreamTimeoutError
+
+    async def fake_call(**kwargs):
+        raise InsuqUpstreamTimeoutError("timed out")
+
+    monkeypatch.setattr(main, "call_verify_collateral_insurance", fake_call)
+
+    resp = client.post(
+        "/a2a/skills/assess-loan", json=_valid_assess_loan_body(), headers=_headers("chain-loan-1")
+    )
+    assert resp.status_code == 504
+    assert resp.json()["error"] == "upstream_timeout"
+
+
+def test_assess_loan_forwards_loan_amount_as_required_coverage(monkeypatch):
+    captured = {}
+
+    async def fake_call(**kwargs):
+        captured.update(kwargs)
+        return {"status": "completed", "policy_valid": True, "coverage_amount": 500000000, "sufficient": True, "evidence": []}
+
+    monkeypatch.setattr(main, "call_verify_collateral_insurance", fake_call)
+
+    client.post(
+        "/a2a/skills/assess-loan",
+        json=_valid_assess_loan_body(loan_amount=700000000),
+        headers=_headers("chain-loan-1"),
+    )
+
+    assert captured["required_coverage"] == 700000000
+    assert captured["building_id"] == "BLD-A"
+    assert captured["request_chain_id"] == "chain-loan-1"
+    assert captured["finallq_company_id"] == "FQ-1043"
