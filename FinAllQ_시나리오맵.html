@@ -167,10 +167,10 @@
       <p class="eyebrow">Q 시리즈 · FinAllQ 전용 지도</p>
       <h1>FinAllQ 시나리오 & 구현 현황 지도</h1>
       <p class="lede">돈이 오가는 요청과 상담을 처리하는 은행·증권 파트 <b>FinAllQ</b>의 독립 단독 페이지입니다.
-      <br>🟢 <b>세 프로젝트 중 가장 많이 구현되었습니다 (Sprint 1~14 완료, Sprint 15 진행 중)</b> — 내부 흐름(온보딩, 이체, FDS, AI비서, 자산리포트, 여신심사)은 <b>1,300개 이상 자동 테스트</b>로 검증되어 있으며, <b>59개 REST 엔드포인트 · 31개 화면 · 20개 에이전트 툴</b>이 구축되어 있습니다. 바깥으로 난 A2A 창구(Agent Card · :9001 포트)만 얹으면 경계 시나리오(S5·S6·S8 등)를 즉시 수용할 수 있습니다.
-      <br>🟡 <b>2026-08-20 갱신</b> — 여신 심사에 자동거절 이력(Sprint 14)과 심사 근거(한도·담보·LTV) 화면(Sprint 15, 진행 중)이 추가돼 S8·S13의 "도메인 완비" 주장이 더 튼튼해졌습니다. 반대로 기업 온보딩(126~130)은 이미 완료였지만 <b>파트너 자격증명·머신 신원(131·132)은 여전히 미착수</b>라는 게 이번에 <code>A2A_IDENTITY.md</code> 재조사로 재확인됐습니다 — 아래 §① 연결되는 지점을 참고하세요.</p>
+      <br>🟢 <b>세 프로젝트 중 가장 많이 구현되었습니다 (Sprint 1~17 완료)</b> — 내부 흐름(온보딩, 이체, FDS, AI비서, 자산리포트, 여신심사, 2FA step-up, 여신↔이체 연결)은 <b>1,500개 이상 자동 테스트</b>로 검증되어 있으며, <b>60개 이상 REST 엔드포인트 · 33개 화면 · 20개 에이전트 툴</b>이 구축되어 있습니다. <b>바깥으로 난 A2A 창구는 이미 얹혀 있습니다</b> — 독립 어댑터(<code>a2a_adapter/</code>, :9101 포트)가 <code>request-withdrawal</code>(S5)·<code>assess-loan</code>(S8, InsuQ 2차 홉 포함) 2개 스킬을 실제 서비스 계정으로 종단 검증까지 마쳤습니다.
+      <br>🟢 <b>2026-08-23 갱신(Sprint 17)</b> — 여신 승인과 이체 사이의 끊긴 다리를 놓았습니다: 승인된 여신 상세 화면에서 [출금 준비] 버튼으로 이체 신청 폼에 사전채움되고, 서버가 잔여한도(LOAN_008)·미승인 상태(LOAN_007) 가드를 검증합니다(자동 생성은 아님 — 최종 트리거는 여전히 사람). A2A 쪽은 <code>request-withdrawal</code> 폴링이 "결재 대기"(<code>finance-approval</code>)와 "TOTP 필요"(<code>totp-verification</code>)를 구분하게 됐습니다 — 단, <b>A2A가 TOTP 코드를 대신 제출하는 기능은 의도적으로 만들지 않았습니다</b>(CORPORATE 서비스 계정 구조상 결재권자=실제 사람이 코드를 내야 2FA가 유지됨). 브라우저 자동화로 실제 화면까지 실증했습니다. 파트너 자격증명·머신 신원(131·132)은 여전히 미착수 상태입니다 — 아래 §① 연결되는 지점을 참고하세요. <b>🟢 2026-08-24 갱신(Sprint 18)</b> — 나머지 5개 스킬(hedge·financing·settlement·중고설비대출·replacement-financing) 실구현을 완료했고, 같은 날 FinAllQ·InsuQ·MaintQ 3사를 동시에 로컬 기동해 <b>실제 크로스레포 A2A 통신</b>까지 확인했습니다(MaintQ 실제 코드가 트리거한 request-withdrawal·assess-loan 둘 다 end-to-end 200). 그 과정에서 assess-loan(S8)의 A2A 스키마가 실제 계약과 달랐던 것도 발견해 계약대로 재설계했습니다.</p>
     </div>
-    <div class="asof">기준 시점<b>2026-08-20</b><span style="display:block;font-size:11px;margin-top:3px">FinAllQ Sprint 14 완료 · Sprint 15 Stage 1 완료 반영</span></div>
+    <div class="asof">기준 시점<b>2026-08-23</b><span style="display:block;font-size:11px;margin-top:3px">FinAllQ Sprint 17 완료(main 병합) · Sprint 18 계획 중</span></div>
   </header>
 
   <div class="status-legend">
@@ -193,7 +193,7 @@
   <section class="slide" id="finallq">
     <div class="sec-head"><h2>① FinAllQ 안에서 벌어지는 일</h2><span class="count">내부 S19~S23 · 경계 S5 · S6 · S8 · S12 · S13 · S15 · S16</span></div>
     <p class="sec-note">돈이 오가는 요청과 상담을 처리하는 은행·증권 파트입니다. MaintQ에서 오는 요청은 전부 여기서 <term data-tip="Fraud Detection System. 이상한 거래(사기·오류일 가능성)를 자동으로 걸러내는 장치.">이상거래 탐지(FDS)</term>를 한 번 거칩니다.
-    <br><b>🟢 세 프로젝트 중 가장 많이 만들어진 곳입니다</b> — 아래 S19~S23은 <b>이미 도는 내부 흐름</b>이고, 경계를 넘는 S5·S6·S8은 이 위에 <term data-tip="다른 회사 AI가 요청을 보낼 수 있게 열어두는 창구. 명함(Agent Card)과 전용 포트(:9001)로 이뤄집니다.">A2A 창구</term>만 얹으면 됩니다.</p>
+    <br><b>🟢 세 프로젝트 중 가장 많이 만들어진 곳입니다</b> — 아래 S19~S23은 <b>이미 도는 내부 흐름</b>이고, 경계를 넘는 S5·S8은 <term data-tip="다른 회사 AI가 요청을 보낼 수 있게 열어두는 창구. 명함(Agent Card)과 전용 포트(:9101)로 이뤄집니다.">A2A 창구</term>가 이미 얹혀 실동작 중입니다. S6·S12·S13·S15·S16도 이제 같은 창구에서 실동작합니다(Sprint 18, 2026-08-24 완료·실제 크로스레포 검증).</p>
 
     <div class="repo-head"><span class="repo-badge finallq">FinAllQ</span><span style="font-size:13px;color:var(--ink-dim)">은행 · 증권 담당자가 쓰는 화면</span></div>
 
@@ -278,7 +278,7 @@
     </div>
 
     <div class="subhead" style="margin-top:34px">
-      경계를 넘는 요청 — 여기부터는 아직 창구가 없다
+      경계를 넘는 요청 — 창구(:9101)는 열렸고, 7/7 스킬이 실동작한다
       <span class="badge-row" data-badges="A2A"><span class="brlabel">가로막는 것</span></span>
     </div>
 
@@ -319,7 +319,7 @@
     </div>
 
     <div class="subhead">
-      대출 심사 <span style="font-weight:500;color:var(--st-done-ink);font-size:12.5px">— Sprint 12 API 4종 → Sprint 14 거절 이력 → Sprint 15 심사 근거 화면(진행 중)</span>
+      대출 심사 <span style="font-weight:500;color:var(--st-done-ink);font-size:12.5px">— Sprint 12 API 4종 → Sprint 14 거절 이력 → Sprint 15 심사 근거 화면 → Sprint 17 여신↔이체 연결 → assess-loan(S8) A2A 실동작</span>
       <span class="badge-row" data-badges="S8,S13"><span class="brlabel">관련 시나리오</span></span>
     </div>
     <div class="plate">
@@ -349,22 +349,22 @@
     </div>
 
     <div class="connect-note"><b>연결되는 지점</b> S5·S12의 "요청 접수"는 통신 다이어그램의 MaintQ↔FinAllQ 선에서 오는 요청이 그대로 들어오는 자리입니다. S8·S13의 두 번째 다리(InsuQ에 물어보는 부분)가 통신 다이어그램의 FinAllQ↔InsuQ 선입니다. S15는 InsuQ가 먼저 시작해서 여기로 상담이 넘어오는 반대 방향입니다.
-    <br><br><b>🔑 중요한 관찰</b> — S5가 도착하면 타야 할 레일(<b>S20 결재 흐름 + S21 이상거래 탐지 + 감사 로그</b>)과 S8의 <b>여신 심사 도메인(Sprint 12)</b>은 <b>이미 다 깔려 있습니다.</b> 빠진 것은 흐름이 아니라 <b>바깥으로 난 문</b>(Agent Card · :9001)입니다. S6·S16(상담)은 그 문 뒤에 붙일 <b>분석 로직이 아직 없고</b>, S8·S13(멀티홉)은 InsuQ 쪽 상대 창구와 함께 있어야 완전한 릴레이가 성립합니다.</div>
+    <br><br><b>🔑 2026-08-24 갱신</b> — S5가 타는 레일(<b>S20 결재 흐름 + S21 이상거래 탐지 + 감사 로그</b>)과 S8의 <b>여신 심사 도메인(Sprint 12·14·15·17)</b>은 <b>다 깔려 있고, 바깥으로 난 문(Agent Card · :9101 어댑터)도 이미 열려서 7개 스킬(S5·S6·S8·S12·S13·S15·S16) 전부 실동작합니다.</b> Sprint 18에서 나머지 5개 스킬을 실구현했고(backend-core 변경 0줄, 사전 조사대로), 같은 날 FinAllQ·InsuQ·MaintQ 3사 로컬 동시 기동으로 <b>실제 크로스레포 A2A 통신까지 확인</b>했습니다(MaintQ 실코드가 트리거한 request-withdrawal·assess-loan e2e 200, 나머지 5개는 MaintQ 쪽 트리거가 아직 없어 동일 payload 직접 호출로 검증). 이 검증 과정에서 assess-loan(S8)의 A2A 스키마가 실제 계약과 달랐던 것도 발견해 계약대로 재설계했습니다. 남은 건 두 가지입니다 — ① S13이 필요로 하는 InsuQ 쪽 비례보상 필드 중 <code>insured_value</code>는 InsuQ가 실제로 반환함을 확인했으나 <code>effective_recovery</code>는 InsuQ 시드 데이터의 <code>coinsurance_ratio</code> 문제로 아직 null(InsuQ 쪽 이슈, 교차 프로젝트 의존은 유지) ② 파트너 자격증명·머신 신원(131·132, QMesh 착수 전제)이 정식 착수 전이라 지금은 M1 목업 토큰 단계(단, 이 목업 단계 자체는 실제로 동작함을 확인 — InsuQ는 고정 토큰+자기신고 파트너 ID 방식으로 이미 실사용 중).</div>
   </section>
 
   <!-- ================= ② FinAllQ 구현 현황 ================= -->
   <section class="slide" id="status">
-    <div class="sec-head"><h2>② FinAllQ 구현 현황</h2><span class="count">Sprint 1~14 완료 · Sprint 15 Stage 1 완료 · 2026-08-20 실측</span></div>
-    <p class="sec-note">세 프로젝트 중 <b>가장 많이 만들어진 곳</b>입니다. <b>59개 엔드포인트와 1,300개 이상 테스트</b>로 내부 코어와 AI 비서 오케스트레이션이 완벽히 가동 중입니다. 다만 <b>"많이 만든 것"과 "A2A로 쓸 수 있는 것"은 다릅니다</b> — 안쪽 흐름은 도는데 바깥으로 난 창구가 아직 없습니다. 아래에서 그 구분을 그림으로 보여줍니다.</p>
+    <div class="sec-head"><h2>② FinAllQ 구현 현황</h2><span class="count">Sprint 1~17 완료 · 2026-08-23 실측</span></div>
+    <p class="sec-note">세 프로젝트 중 <b>가장 많이 만들어진 곳</b>입니다. <b>60개 이상 엔드포인트와 1,500개 이상 테스트</b>로 내부 코어와 AI 비서 오케스트레이션이 완벽히 가동 중입니다. <b>바깥으로 난 A2A 창구도 이미 열려 7개 스킬 전부 실동작</b>합니다(Sprint 18, 2026-08-24 완료) — "많이 만든 것"과 "A2A로 쓸 수 있는 것"의 간극이 이제 닫혔고, FinAllQ·InsuQ·MaintQ 3사 실제 크로스레포 연동까지 확인됐습니다.</p>
 
     <div class="statgrid">
-      <div class="statbox"><b>14</b><span>완료 스프린트 <span style="font-size:10px">(15는 Stage 1 완료, 진행 중)</span></span></div>
-      <div class="statbox"><b>59</b><span>REST 엔드포인트 <span style="font-size:10px">(초대·기업등록 포함)</span></span></div>
-      <div class="statbox"><b>31</b><span>실제 화면 <span style="font-size:10px">(React 19)</span></span></div>
+      <div class="statbox"><b>17</b><span>완료 스프린트</span></div>
+      <div class="statbox"><b>60+</b><span>REST 엔드포인트 <span style="font-size:10px">(초대·기업등록·여신↔이체 포함)</span></span></div>
+      <div class="statbox"><b>33</b><span>실제 화면 <span style="font-size:10px">(React 19)</span></span></div>
       <div class="statbox"><b>20</b><span>에이전트 툴 <span style="font-size:10px">(전수 화면 연결 완료)</span></span></div>
-      <div class="statbox"><b>1,300+</b><span>자동 테스트 <span style="font-size:10px">(백엔드 831·프론트 391 실측)</span></span></div>
-      <div class="statbox"><b>20</b><span>DB 테이블 <span style="font-size:10px">(여신 3종 포함)</span></span></div>
-      <div class="statbox crit"><b>0</b><span>A2A 창구</span></div>
+      <div class="statbox"><b>1,500+</b><span>자동 테스트 <span style="font-size:10px">(백엔드 957·프론트 484·a2a_adapter 270)</span></span></div>
+      <div class="statbox"><b>21</b><span>DB 테이블 <span style="font-size:10px">(여신 3종+V21 연결 포함)</span></span></div>
+      <div class="statbox"><b>7/7</b><span>A2A 스킬 실동작 <span style="font-size:10px">(전 스킬, :9101, 크로스레포 검증 완료)</span></span></div>
     </div>
 
     <div class="subhead" style="margin-top:30px">시나리오별 진행도 — FinAllQ가 관여하는 것만</div>
@@ -375,10 +375,11 @@
         <div class="prog-row"><span class="prog-id done">S21</span><span class="prog-name">이상거래 탐지 · 경보 (규칙→FDS 2중 방어)</span><span class="prog-bar"><i class="done" style="width:88%"></i><i class="todo" style="width:12%"></i></span><span class="prog-pct">구현됨 <em>· 모델은 난수 학습</em></span></div>
         <div class="prog-row"><span class="prog-id done">S22</span><span class="prog-name">AI 비서 오케스트레이션 (툴 20종 · 근거 패널)</span><span class="prog-bar"><i class="done" style="width:100%"></i></span><span class="prog-pct">구현됨 <em>· 툴 미연결 0건</em></span></div>
         <div class="prog-row"><span class="prog-id prog">S23</span><span class="prog-name">통합 자산 · 리포트</span><span class="prog-bar"><i class="done" style="width:70%"></i><i class="todo" style="width:30%"></i></span><span class="prog-pct">계산 O <em>· 데이터가 합성</em></span></div>
-        <div class="prog-row sep"><span class="prog-id prog">S5</span><span class="prog-name">출금 요청 (2단 승인) — MaintQ→FinAllQ</span><span class="prog-bar"><i class="done" style="width:75%"></i><i class="todo" style="width:25%"></i></span><span class="prog-pct">레일 완비 <em>· 창구 없음</em></span></div>
-        <div class="prog-row"><span class="prog-id prog">S8</span><span class="prog-name">담보-보험 검증 (여신 심사 도메인 + 거절 이력 + 근거 화면)</span><span class="prog-bar"><i class="done" style="width:62%"></i><i class="todo" style="width:38%"></i></span><span class="prog-pct">S12·S14 완료·S15 진행 <em>· A2A 대기</em></span></div>
-        <div class="prog-row"><span class="prog-id todo">S6</span><span class="prog-name">환헤지 · 자금운용 상담</span><span class="prog-bar"><i class="done" style="width:15%"></i><i class="todo" style="width:85%"></i></span><span class="prog-pct">미착수 <em>· 분석 로직 없음</em></span></div>
-        <div class="prog-row"><span class="prog-id todo">S12·S16</span><span class="prog-name">매각대금 정산 · 자금조달 비교</span><span class="prog-bar"><i class="done" style="width:8%"></i><i class="todo" style="width:92%"></i></span><span class="prog-pct">미착수</span></div>
+        <div class="prog-row sep"><span class="prog-id done">S5</span><span class="prog-name">출금 요청 (2단 승인) — MaintQ→FinAllQ</span><span class="prog-bar"><i class="done" style="width:100%"></i></span><span class="prog-pct">구현됨 <em>· 어댑터(:9101) & E2E 완료 · pending_action 폴링 구분(Sprint 17)</em></span></div>
+        <div class="prog-row"><span class="prog-id done">S8</span><span class="prog-name">담보-보험 검증 (여신 심사+여신↔이체 연결+InsuQ 2차 홉)</span><span class="prog-bar"><i class="done" style="width:100%"></i></span><span class="prog-pct">구현됨 <em>· assess-loan A2A 실동작(2026-08-23)</em></span></div>
+
+        <div class="prog-row"><span class="prog-id todo">S6</span><span class="prog-name">환헤지 · 자금운용 상담</span><span class="prog-bar"><i class="done" style="width:15%"></i><i class="todo" style="width:85%"></i></span><span class="prog-pct">미착수 <em>· Sprint 18 계획 중</em></span></div>
+        <div class="prog-row"><span class="prog-id todo">S12·S16</span><span class="prog-name">매각대금 정산 · 자금조달 비교</span><span class="prog-bar"><i class="done" style="width:8%"></i><i class="todo" style="width:92%"></i></span><span class="prog-pct">미착수 <em>· Sprint 18 계획 중</em></span></div>
       </div>
     </div>
 
@@ -398,11 +399,11 @@
           <text x="78" y="143" text-anchor="middle" font-size="13" font-weight="700" fill="var(--maintq-ink)">MaintQ</text>
           <text x="78" y="161" text-anchor="middle" font-size="10.5" fill="var(--maintq-ink)">팀장 승인 완료</text>
 
-          <rect x="196" y="104" width="150" height="90" rx="10" fill="var(--st-todo-soft)" stroke="var(--st-critical)" stroke-width="2.6" stroke-dasharray="7 4"/>
-          <text x="271" y="130" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--st-critical)">A2A 창구</text>
-          <text x="271" y="149" text-anchor="middle" font-size="10.5" fill="var(--st-todo-ink)">Agent Card</text>
-          <text x="271" y="165" text-anchor="middle" font-size="10.5" fill="var(--st-todo-ink)">:9001 얼굴 포트</text>
-          <text x="271" y="183" text-anchor="middle" font-size="11" font-weight="700" fill="var(--st-critical)">← 이것만 없다</text>
+          <rect x="196" y="104" width="150" height="90" rx="10" fill="var(--st-done-soft)" stroke="var(--st-done)" stroke-width="1.8"/>
+          <text x="271" y="130" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--st-done-ink)">A2A 창구</text>
+          <text x="271" y="149" text-anchor="middle" font-size="10.5" fill="var(--st-done-ink)">Agent Card</text>
+          <text x="271" y="165" text-anchor="middle" font-size="10.5" fill="var(--st-done-ink)">:9101 어댑터</text>
+          <text x="271" y="183" text-anchor="middle" font-size="11" font-weight="700" fill="var(--st-done-ink)">← 이제 있다(2026-08-23)</text>
           <line x1="144" y1="149" x2="194" y2="149" stroke="var(--ink-faint)" stroke-width="1.4" marker-end="url(#sar)"/>
 
           <text x="655" y="36" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--st-done)">이 뒤는 전부 이미 돈다 — S20 · S21이 그것</text>
@@ -445,7 +446,7 @@
           <line x1="764" y1="174" x2="790" y2="174" stroke="var(--finallq)" stroke-width="1.3" marker-end="url(#sar-ok)"/>
         </g>
       </svg>
-      <p class="figcap">🔴 <b>S5가 "구현 중"인 이유는 결재 로직이 없어서가 아닙니다.</b> 요청을 받을 <b>문</b>이 없을 뿐이고, 문 뒤의 레일 — 2단 승인·FDS·감사·잔액 차감 — 은 개인/기업 양쪽 모드로 이미 실증됐습니다. A2A 관점에서 남은 일은 <b>기존 REST 흐름을 Agent Card 스킬로 감싸는 어댑터</b>입니다.</p>
+      <p class="figcap">✅ <b>2026-08-24 — 이 문(A2A 창구)이 7개 스킬 전부로 열렸습니다.</b> 요청을 받을 문 뒤의 레일(2단 승인·FDS·감사·잔액 차감)뿐 아니라, <b>기존 REST 흐름을 Agent Card 스킬로 감싸는 어댑터(a2a_adapter, :9101)</b>도 실제 서비스 계정으로 종단 검증까지 끝났습니다. Sprint 18에서 나머지 5개 스킬(hedge·financing·settlement·중고설비대출·replacement-financing)을 같은 패턴으로 실구현했고, FinAllQ·InsuQ·MaintQ 3사 실제 크로스레포 통신까지 확인했습니다.</p>
     </div>
 
     <div class="subhead">FinAllQ 내부 구조 — 왜 이렇게 나눴나</div>
@@ -506,10 +507,10 @@
           <line x1="490" y1="150" x2="702" y2="132" stroke="var(--ink-faint)" stroke-width="1.2" marker-end="url(#aar)"/>
           <line x1="490" y1="172" x2="702" y2="192" stroke="var(--ink-faint)" stroke-width="1.2" marker-end="url(#aar)"/>
 
-          <rect x="852" y="126" width="94" height="72" rx="9" fill="var(--st-todo-soft)" stroke="var(--st-critical)" stroke-width="2.4" stroke-dasharray="6 4"/>
-          <text x="899" y="152" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--st-critical)">A2A</text>
-          <text x="899" y="170" text-anchor="middle" font-size="10" fill="var(--st-todo-ink)">:9001</text>
-          <text x="899" y="187" text-anchor="middle" font-size="10" fill="var(--st-critical)">창구 대기</text>
+          <rect x="852" y="126" width="94" height="72" rx="9" fill="var(--st-done-soft)" stroke="var(--st-done)" stroke-width="1.6"/>
+          <text x="899" y="150" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--st-done-ink)">A2A</text>
+          <text x="899" y="167" text-anchor="middle" font-size="10" fill="var(--st-done-ink)">:9101</text>
+          <text x="899" y="182" text-anchor="middle" font-size="9.5" fill="var(--st-done-ink)">7/7 스킬</text>
         </g>
       </svg>
       <p class="figcap"><b>코어와 모델을 프로세스 단위로 갈랐습니다.</b> 같은 프로세스에 모델을 태우면 배포는 쉽지만 <b>모델이 죽을 때 이체도 같이 죽습니다.</b> 사이에 <b>차단기</b>를 둬 AI 장애가 코어로 번지지 않게 했습니다 — A2A에서 남의 에이전트를 부를 때도 같은 경계가 필요합니다.</p>
@@ -533,8 +534,8 @@
       <div class="tech"><span class="tk">비용</span><b>재조회 전 캐시부터 본다</b><p>목록 화면에서 상세를 N건 미리 긁지 않고, <b>펼친 행 1건만</b> 조회 후 loanId로 캐시합니다(절대 원칙 8). 신규 라이브러리 0개 — 기존 컴포넌트(펼침 행·모달)를 재사용하는 것이 이 프로젝트 전반의 기본값입니다.</p></div>
     </div>
 
-    <div class="connect-note" style="margin-top:22px"><b>A2A로 가려면 남은 일</b> — ① <b>Agent Card</b>(<code>/.well-known/agent-card.json</code>)로 <code>request-withdrawal</code>·<code>assess-loan</code> 같은 스킬을 선언 ② <b>:9001 얼굴 포트</b>를 열고 기존 REST 흐름에 연결하는 어댑터 ③ Task 생명주기 중 <code>input-required</code>(사람 승인 대기) 상태를 <b>기존 결재함에 매핑</b> ④ <code>request_chain_id</code>를 감사 로그에 추가해 멀티홉 추적. <br>🟢 ③은 <b>이미 있는 결재함을 그대로 쓰면 됩니다</b> — 승인 대기라는 개념이 이미 도메인에 있습니다.
-    <br><br>🟡 <b>2026-08-20 재확인</b> — 기업 고객이 "존재하게" 만드는 절반(기업 등록·직원 초대·발급자 lockout)은 이미 다 됐습니다. 그런데 이건 <b>사람 계정</b> 얘기입니다. A2A가 실제로 필요로 하는 건 <b>머신 신원</b>(파트너 자격증명 발급·연결 승인·폐기)이고, 이건 여전히 손도 안 댔습니다(백로그 131·132, QMesh 착수 확정 전까지 보류). 그리고 JWT 클레임에는 지금도 <code>company_id</code>가 없습니다 — 회사 스코프는 매 요청 DB 재조회로 얻습니다. A2A 어댑터를 짤 때 <b>"파트너 토큰 → company_id"</b> 매핑을 어디서 할지가 새로 정할 결정 지점입니다.</div>
+    <div class="connect-note" style="margin-top:22px"><b>✅ 2026-08-24 갱신 — A2A로 가는 4가지 중 3가지가 끝났습니다</b> — ① <b>Agent Card</b>(<code>/.well-known/agent-card.json</code>)에 7개 스킬 전부 선언 완료 ② <b>:9101 어댑터</b> 가동, <b>7개 스킬 전부</b>(request-withdrawal·assess-loan·advise-hedge·advise-financing·advise-replacement-financing·request-settlement·assess-used-equipment-loan)가 실제로 연결됨 — FinAllQ·InsuQ·MaintQ 3사 로컬 동시 기동으로 크로스레포 통신까지 확인 ③ <code>input-required</code> 상태를 <b>기존 결재함 + <code>pending_action</code> 필드</b>(Sprint 17)로 매핑 완료 — "결재 대기"와 "TOTP 필요"까지 구분됨. 남은 건 ④ <code>request_chain_id</code>를 감사 로그에 남기는 것입니다.
+    <br><br>🟡 <b>여전히 남은 것</b> — 기업 고객이 "존재하게" 만드는 절반(기업 등록·직원 초대·발급자 lockout)은 이미 다 됐지만, 이건 <b>사람 계정</b> 얘기입니다. A2A가 실제로 필요로 하는 <b>머신 신원</b>(파트너 자격증명 발급·연결 승인·폐기)은 여전히 손도 안 댔습니다(백로그 131·132, QMesh 착수 확정 전까지 보류 — 지금은 M1 정적 목업 토큰 단계). JWT 클레임에도 <code>company_id</code>가 없어 회사 스코프는 매 요청 DB 재조회로 얻습니다. 그리고 <b>A2A가 TOTP 2차 인증 코드를 대신 제출하는 기능은 의도적으로 만들지 않았습니다</b>(Pool 189) — CORPORATE 서비스 계정 구조상 코드를 내야 하는 사람이 요청자가 아니라 결재권자(실제 사람)라, 대신 내면 2FA가 1FA로 붕괴하기 때문입니다.</div>
   </section>
 
   <!-- ================= ③ 통신 다이어그램 ================= -->
@@ -581,7 +582,7 @@
       <div class="gterm"><b>RAG</b><p>문서(약관·매뉴얼)에서 관련 부분을 찾아서 그걸 근거로 답하는 방식. 지어내지 않고 찾아서 답함.</p></div>
       <div class="gterm"><b>request_chain_id</b><p>요청이 여러 프로젝트를 거칠 때, "이게 원래 어디서 시작된 요청인지" 추적하는 번호표.</p></div>
       <div class="gterm"><b>승인 큐</b><p>확인·승인을 기다리는 요청들이 쌓이는 대기 목록 화면.</p></div>
-      <div class="gterm"><b>Agent Card</b><p>AI 에이전트의 명함. "나는 이런 일을 할 수 있다"를 정해진 주소(<code>/.well-known/agent-card.json</code>)에 적어두면 다른 회사 AI가 읽고 일을 맡길 수 있음. <b>FinAllQ엔 아직 없음.</b></p></div>
+      <div class="gterm"><b>Agent Card</b><p>AI 에이전트의 명함. "나는 이런 일을 할 수 있다"를 정해진 주소(<code>/.well-known/agent-card.json</code>)에 적어두면 다른 회사 AI가 읽고 일을 맡길 수 있음. <b>FinAllQ는 2026-08-23 기준 7개 스킬을 등재, 그중 2개(request-withdrawal·assess-loan)가 실동작.</b></p></div>
       <div class="gterm"><b>앵커(anchor)</b><p>회사에 처음 만들어지는 결재 담당자. 은행이 지정해줘야 생기고, 이 사람이 생겨야 회사가 직원을 초대할 수 있음. 없으면 회사는 사람 0명인 빈 껍데기.</p></div>
       <div class="gterm"><b>결재 라인</b><p>기업 고객에서 "누가 돈 나가는 걸 승인하나"를 정한 규칙. 요청자와 결재자가 반드시 달라야 하고, 시스템 관리자는 결재자가 아님.</p></div>
       <div class="gterm"><b>차단기</b><p>바깥 서비스(AI 모델 등)가 계속 실패하면 잠시 호출을 끊어버리는 장치. 한 곳이 죽었을 때 전체가 같이 느려지거나 죽는 걸 막음.</p></div>
@@ -593,8 +594,8 @@
 
   <footer>
     <span>Q 시리즈 · FinAllQ 시나리오 & 구현 현황 지도</span>
-    <span>기준 2026-08-20</span>
-    <span>FinAllQ 수치는 저장소 실측(Sprint 1~14 완료 · Sprint 15 Stage 1 완료) — REST 엔드포인트 59 · 실제 화면 31 · 툴 20 · 테스트 1,300+(백엔드 831·프론트 391) · DB 20테이블 · 게이트웨이 nginx(:8888) 제거, 프론트 컨테이너가 겸함(Sprint 13)</span>
+    <span>기준 2026-08-24</span>
+    <span>FinAllQ 수치는 저장소 실측(Sprint 1~18 완료, main 병합) — REST 엔드포인트 60+ · 실제 화면 33 · 툴 20 · 테스트 1,500+(백엔드 957·프론트 484·a2a_adapter 270) · DB 21테이블 · 게이트웨이 nginx(:8888) 제거, 프론트 컨테이너가 겸함(Sprint 13) · A2A 어댑터(:9101) 7/7 스킬 실동작, FinAllQ↔InsuQ↔MaintQ 실제 크로스레포 통신 검증 완료</span>
   </footer>
 
 </div>
@@ -608,18 +609,19 @@
     S2:  { title:'S2 · 대체품 탐색', status:'done', important:false, desc:'재고 부족 시 대체 부품 탐색 및 비교 (related_parts 승인 완료, D12 해제).' },
     S3:  { title:'S3 · 반복고장 → 근본원인 점검', status:'done', important:false, desc:'30일 3회 반복 고장 시 근본원인 점검 모드 전환 (완료).' },
     S4:  { title:'S4 · 미지 코드 → 한계 인정', status:'done', important:false, desc:'미지 에러코드 정직한 모른다 응답 및 A/S 안내 (환각률 0.0%).' },
-    S5:  { title:'S5 · 출금 요청 (2단 승인)', status:'progress', important:false, desc:'MaintQ→FinAllQ 출금 요청. 공장 팀장 1차 승인 + 은행 18칸 인가 매트릭스 2차 승인.' },
-    S6:  { title:'S6 · 환헤지 · 자금운용 상담', status:'todo', important:false, desc:'남는 돈이나 환율 변동 대비 은행(증권팀) 상담 (미착수).' },
+    S5:  { title:'S5 · 출금 요청 (2단 승인)', status:'done', important:false, desc:'MaintQ→FinAllQ 출금 요청. 공장 팀장 1차 승인 + 어댑터(:9101) + 은행 18칸 인가 매트릭스 2차 승인 (E2E 완료).' },
+
+    S6:  { title:'S6 · 환헤지 · 자금운용 상담', status:'done', important:false, desc:'a2a_adapter의 advise-hedge 스킬로 실동작(2026-08-24) — 순수 규칙 테이블, risk_tolerance 3단계별 옵션 반환. MaintQ 쪽 트리거는 아직 미배선(동일 payload 직접 호출로 검증).' },
     S7:  { title:'S7 · 화재보험 갱신 상담', status:'todo', important:true, desc:'공장 화재보험 갱신 시 고장이력 첨부 상담 (MaintQ→InsuQ).' },
-    S8:  { title:'S8 · 담보-보험 검증 (멀티홉)', status:'progress', important:true, desc:'담보 대출 신청 시 여신 심사(Sprint 12 도메인·Sprint 14 거절 이력·Sprint 15 심사 근거 화면) 후 InsuQ에 담보 화재보험 유효성을 2차 홉으로 검증.' },
+    S8:  { title:'S8 · 담보-보험 검증 (멀티홉)', status:'done', important:false, desc:'담보 대출 신청 시 여신 심사(Sprint 12 도메인·14 거절 이력·15 심사 근거 화면·17 여신↔이체 연결) 후 InsuQ에 담보 화재보험 유효성을 2차 홉으로 검증. a2a_adapter의 assess-loan 스킬로 실동작(2026-08-23).' },
     S9:  { title:'S9 · 처분 요청 → 법정조건 차단', status:'done', important:false, desc:'설비 매각 법적 조건 차단(판정 5종 실증) 및 해결방법 안내 (완료).' },
     S10: { title:'S10 · 근거 번들 → 서명', status:'done', important:false, desc:'매각 근거 자료 3계층 모음 및 4층 방어 사람 서명 (D90 검수 완료).' },
     S11: { title:'S11 · 보험 목적물 변경 통지', status:'todo', important:false, desc:'설비 변동 시 보험사에 자동 통지 (MaintQ→InsuQ).' },
-    S12: { title:'S12 · 매각대금 정산 · 대출상환', status:'todo', important:false, desc:'매각대금 입금 시 남은 대출 정산/상환 요청 (MaintQ→FinAllQ).' },
-    S13: { title:'S13 · 중고설비 취득 → 담보심사 (멀티홉)', status:'todo', important:true, desc:'중고 설비 매입 시 담보심사 및 보험 유효성 멀티홉 검증.' },
+    S12: { title:'S12 · 매각대금 정산 · 대출상환', status:'done', important:false, desc:'a2a_adapter의 request-settlement 스킬로 실동작(2026-08-24) — 순수 계산(매각대금≥잔액+상환수수료 여부로 repay/hold 판정). 계약에 loan_id가 없어 FinAllQ 실제 여신 잔액엔 미반영(이월).' },
+    S13: { title:'S13 · 중고설비 취득 → 담보심사 (멀티홉)', status:'done', important:true, desc:'a2a_adapter의 assess-used-equipment-loan 스킬로 실동작(2026-08-24) — 정액법 감가상각 감정가 산출 + InsuQ verify-collateral-insurance 2차 홉 실호출까지 확인(insured_value 실수신, effective_recovery는 InsuQ 시드 데이터의 coinsurance_ratio 이슈로 아직 null — InsuQ 쪽 상태).' },
     S14: { title:'S14 · 위험등급 변동 통지', status:'todo', important:false, desc:'설비 도입 시 공장 위험등급 변동 통지 (MaintQ→InsuQ).' },
-    S15: { title:'S15 · 화재멸실 → 보험금 → 과세이연 (멀티홉)', status:'todo', important:true, desc:'화재멸실 산정 및 과세이연 금융 상담 릴레이.' },
-    S16: { title:'S16 · 설비 취득 자금조달 비교 상담', status:'todo', important:false, desc:'대출/리스/자기자금 조달 방안 비교 상담 (MaintQ→FinAllQ).' },
+    S15: { title:'S15 · 화재멸실 → 보험금 → 과세이연 (멀티홉)', status:'done', important:true, desc:'a2a_adapter의 advise-replacement-financing 스킬(2차 홉 전용)로 실동작(2026-08-24) — tax_deferral_applicability는 원칙적으로 needs_expert_review, 조건 충족 시에만 deferred(단정 최소화). InsuQ claim-insurance와의 체인 연속성 검증은 의도적 미구현(Pool 132).' },
+    S16: { title:'S16 · 설비 취득 자금조달 비교 상담', status:'done', important:false, desc:'a2a_adapter의 advise-financing 스킬로 실동작(2026-08-24) — 담보대출/리스/자기자금 옵션 비교, collateral_available=false면 담보대출 옵션 제외.' },
     S17: { title:'S17 · 법령 개정 감지 → 재서명', status:'todo', important:false, desc:'법령 개정 감지 후 사람 확인 및 룰 갱신 (check_revisions 코드 완비, v2 제외).' },
     S18: { title:'S18 · 중고 매수 권리관계 검증', status:'done', important:false, desc:'중고 설비 매수 시 9카테고리 38항목 실사 검증 (전건 PARTIAL 완료).' },
     S29: { title:'S29 · 수리 완료 → 증빙 서명', status:'done', important:true, desc:'수리 완료 후 부품/시리얼/작업유형 묶어 증빙 서명 (Sprint 9 완료, create_repair_record).' },
@@ -634,7 +636,7 @@
     S27: { title:'S27 · 멀티홉 조항 추적', status:'done', important:false, desc:'조항 간 참조를 따라가는 추적 흐름.' },
     S28: { title:'S28 · 화재·재물 도메인', status:'progress', important:true, desc:'화재·재물 특약 조항 RAG 및 평가.' },
     IA2A:{ title:'InsuQ A2A 얼굴', status:'todo', important:true, desc:'InsuQ의 A2A 창구.' },
-    A2A: { title:'FinAllQ A2A 얼굴 (Agent Card · :9001)', status:'todo', important:true, desc:'FinAllQ에 요청을 받을 명함(Agent Card)과 :9001 포트. 안쪽 레일은 준비 완료 상태입니다.' }
+    A2A: { title:'FinAllQ A2A 얼굴 (Agent Card · :9101)', status:'done', important:false, desc:'FinAllQ 요청 창구(Agent Card·:9101 어댑터)가 열려 있고 7개 선언 스킬 전부 실동작합니다(Sprint 18, 2026-08-24 완료). FinAllQ·InsuQ·MaintQ 3사 실제 크로스레포 통신까지 확인.' }
   };
 
   var STATUS_LABEL = { done:'구현됨', progress:'구현 중', todo:'아직 시작 안 함' };
