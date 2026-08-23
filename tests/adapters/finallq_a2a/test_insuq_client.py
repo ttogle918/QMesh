@@ -115,3 +115,20 @@ async def test_call_returns_body_even_when_insuq_rejects(httpx_mock):
 
     assert result["status"] == "rejected"
     assert result["policy_valid"] is False
+
+
+async def test_call_raises_distinct_message_on_insuq_not_implemented_501(httpx_mock):
+    httpx_mock.add_response(
+        url="http://test-insuq/a2a/skills/verify-collateral-insurance",
+        method="POST",
+        status_code=501,
+    )
+
+    with pytest.raises(UpstreamUnavailableError, match="has not implemented"):
+        await call_verify_collateral_insurance(
+            building_id="BLD-A",
+            required_coverage=500000000,
+            request_chain_id="chain-1",
+            finallq_company_id="FQ-1043",
+            base_url="http://test-insuq",
+        )

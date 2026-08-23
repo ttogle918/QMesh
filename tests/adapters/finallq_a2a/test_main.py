@@ -423,3 +423,17 @@ def test_assess_loan_forwards_loan_amount_as_required_coverage(monkeypatch):
     assert captured["building_id"] == "BLD-A"
     assert captured["request_chain_id"] == "chain-loan-1"
     assert captured["finallq_company_id"] == "FQ-1043"
+
+
+def test_assess_loan_handles_null_coverage_amount_from_insuq(monkeypatch):
+    async def fake_call(**kwargs):
+        return {"status": "completed", "policy_valid": True, "coverage_amount": None, "evidence": []}
+
+    monkeypatch.setattr(main, "call_verify_collateral_insurance", fake_call)
+
+    resp = client.post(
+        "/a2a/skills/assess-loan", json=_valid_assess_loan_body(), headers=_headers("chain-loan-1")
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["decision"] == "conditional"

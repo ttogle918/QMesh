@@ -59,7 +59,9 @@ def map_loan_decision(insuq_response: dict, loan_amount: float) -> dict:
     """
     status = insuq_response.get("status")
     policy_valid = insuq_response.get("policy_valid", False)
-    coverage_amount = insuq_response.get("coverage_amount", 0)
+    coverage_amount = insuq_response.get("coverage_amount")
+    if coverage_amount is None:
+        coverage_amount = 0
 
     if status == "rejected" or not policy_valid:
         return {

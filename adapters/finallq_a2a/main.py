@@ -1,8 +1,9 @@
-"""FinAllQ request-withdrawal A2A 어댑터 — 독립 FastAPI 서비스 (기본 포트 9101).
+"""FinAllQ A2A 어댑터 — 독립 FastAPI 서비스 (기본 포트 9101).
 
 FinAllQ 코드를 건드리지 않고 기존 REST API(/api/v1/auth/login, /api/v1/accounts,
-/api/v1/transfers)를 A2A 봉투로 감싼다. request-withdrawal 외 6개 스킬은 Agent
-Card에는 선언돼 있지만 이 프로토타입에서는 미구현 — 501로 명시 응답한다.
+/api/v1/transfers)를 A2A 봉투로 감싼다. request-withdrawal(S5)·assess-loan(S8, InsuQ
+verify-collateral-insurance 2차 홉 — InsuQ 쪽 미구현이라 아직 502로 끝난다) 외 5개
+스킬은 Agent Card에는 선언돼 있지만 이 프로토타입에서는 미구현 — 501로 명시 응답한다.
 """
 
 from __future__ import annotations
@@ -228,8 +229,14 @@ async def assess_loan(request: Request) -> JSONResponse:
             content={"error": "upstream_timeout", "detail": str(exc), "request_chain_id": parsed.request_chain_id},
         )
 
-    mapped = map_loan_decision(insuq_response, parsed.loan_amount)
-    validated = AssessLoanResponse.model_validate({"status": "completed", **mapped})
+    try:
+        mapped = map_loan_decision(insuq_response, parsed.loan_amount)
+        validated = AssessLoanResponse.model_validate({"status": "completed", **mapped})
+    except (TypeError, ValueError, ValidationError) as exc:
+        return JSONResponse(
+            status_code=502,
+            content={"error": "upstream_unavailable", "detail": str(exc), "request_chain_id": parsed.request_chain_id},
+        )
     return JSONResponse(status_code=200, content=validated.model_dump(exclude_none=True))
 
 

@@ -112,3 +112,15 @@ def test_map_loan_decision_missing_coverage_amount_defaults_to_zero():
     )
     assert result["decision"] == "conditional"
     assert result["collateral_check"]["coverage_amount"] == 0
+
+
+def test_map_loan_decision_handles_null_coverage_amount_without_crashing():
+    """InsuQ 쪽 verify-collateral-insurance가 아직 없어(설계 발견②) 실제로 어떤 모양의
+    응답을 줄지 확정할 수 없다 — coverage_amount가 키는 있는데 값이 null인 경우도
+    방어해야 한다(get(key, 0) 기본값은 키가 아예 없을 때만 적용되고 null에는 안 먹는다)."""
+    result = map_loan_decision(
+        {"status": "completed", "policy_valid": True, "coverage_amount": None, "evidence": []},
+        loan_amount=500000000,
+    )
+    assert result["decision"] == "conditional"
+    assert result["collateral_check"]["coverage_amount"] == 0
