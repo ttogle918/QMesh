@@ -1,13 +1,20 @@
 # Q 시리즈 (MaintQ · FinAllQ · InsuQ) A2A 통합 다이어그램 명세서
 
-> **문서 버전**: v1.1 (실측 기준 정정)
-> **기준 시점**: 2026-08-21
+> **문서 버전**: v1.2 (실측 기준 정정)
+> **기준 시점**: 2026-08-24
 > **목적**: Q 시리즈 3개 시스템(제조보전 MaintQ, 은행/증권 FinAllQ, 보험 InsuQ) 간 A2A 통신과
 > 각 시스템 내부 핵심 흐름을 시각화한다.
 >
 > ⚠️ **이 문서의 상태 표기 원칙**: 모든 다이어그램에 `✅ 실측 동작` / `🔴 설계만·미연결`
 > 라벨을 명시한다. 코드가 존재한다고 곧 끝단까지 연결됐다는 뜻은 아니다 — 아래 §⑦이
 > 그 구분이 가장 중요한 절이다.
+>
+> 🆕 **v1.2 정정 (2026-08-24)**: v1.1이 "죽은 코드"·"트리거 미연결"로 판정했던
+> `request-withdrawal`(S5)과, 2차 홉 미구현으로 막혀 있던 `assess-loan`(S8) 이 **둘 다
+> 실 어댑터 상대 E2E 성공(200)을 확인**했다 — 아래 §①·②·④·⑤·⑦을 그 실측으로 갱신했다.
+> 또한 FinAllQ가 5개 스킬(advise-hedge·advise-financing·request-settlement·
+> assess-used-equipment-loan·advise-replacement-financing)을 추가로 구현·검증했으나
+> **MaintQ 발신 트리거는 아직 미착수**다(§⑦ 끝 표 참고).
 
 ---
 
@@ -37,18 +44,21 @@ flowchart TD
         I["약관검색·정책원장·청구"]
     end
 
-    M -- "S5 request-withdrawal (🔴 트리거 미연결)<br>S6·S12·S16 (미구현)" --> F
-    M -- "S7·S11·S14 (미구현)<br>lookup-clause (✅ 실동작)" --> I
-    F -- "S8·S13 verify-collateral-insurance (FinAllQ 쪽 assess-loan 호출부 구현·InsuQ 쪽 수신부 미구현)" --> I
-    I -- "S15 claim-insurance→advise-replacement-financing (미구현)" --> F
+    M -- "S5 request-withdrawal (✅ 실측 동작, E2E 성공)<br>S8 assess-loan (✅ 실측 동작, E2E 성공)<br>S6·S12·S16 (FinAllQ 수신부 완료·MaintQ 발신 미착수)" --> F
+    M -- "S7·S11·S14 (미구현)<br>lookup-clause (🔴 자격증명 미설정으로 차단 — 사람 몫)" --> I
+    F -- "S8·S13 verify-collateral-insurance (✅ 실측 동작 — InsuQ 2차 홉 구현 완료)" --> I
+    I -- "S15 claim-insurance→advise-replacement-financing (FinAllQ 수신부 완료·MaintQ 발신 미착수)" --> F
 ```
 
 > **MaintQ는 A2A 스킬을 노출하지 않는다** — 항상 요청을 시작하는 client다
 > (`docs/ref_maintq/A2A_CONTRACTS.md`). InsuQ `lookup-clause`·FinAllQ `request-withdrawal`은
 > **수신자** 쪽이고, MaintQ 쪽엔 받는 어댑터가 없다 — MaintQ가 각 어댑터를 호출하는
-> 클라이언트 코드만 있다(§⑦). 🆕 FinAllQ `assess-loan`(S8)은 그 반대다 — MaintQ의
+> 클라이언트 코드만 있다(§⑦). FinAllQ `assess-loan`(S8)은 그 반대다 — MaintQ의
 > 요청을 받는 수신자이면서 동시에 InsuQ `verify-collateral-insurance`를 2차 홉으로
-> 부르는 **발신자**이기도 하다(위 다이어그램 F→I 엣지).
+> 부르는 **발신자**이기도 하다(위 다이어그램 F→I 엣지). 🆕 **2026-08-24**: `request-withdrawal`·
+> `assess-loan` 둘 다 실 어댑터 상대 E2E 성공을 확인했다 — `lookup-clause`만 여전히
+> 막혀 있는데, 이번엔 코드가 아니라 **MaintQ 쪽 서비스 자격증명 미설정**(사람이 처리할 일)
+> 때문이다.
 
 ---
 
@@ -80,7 +90,21 @@ sequenceDiagram
 포트(`:9102`)도 실제 InsuQ 어댑터와 일치한다. 단, InsuQ ai-engine(실제 서비스)이 안
 떠 있으면 502를 받는다 — 그건 정상 동작(설계대로).
 
-### 2.2 request-withdrawal — 🔴 설계·부품만 있고 트리거가 없다
+> 🆕 **2026-08-24**: 코드 경로는 위 그대로 살아 있고 정상 동작하지만, 지금 실제로 호출하면
+> **MaintQ 쪽 서비스 자격증명이 아직 설정되지 않아 차단된다** — 이건 코드·계약 문제가 아니라
+> 사람이 자격증명을 채워야 풀리는 운영 항목이다(`TODO_직접할일.md`, MaintQ 레포).
+
+### 2.2 request-withdrawal — ✅ 실측 동작 (2026-08-24, E2E 성공 확인)
+
+> 🆕 v1.1은 이 절을 "🔴 설계·부품만 있고 트리거가 없다"로 판정했다 — **그 판정은
+> 틀렸고, 2026-08-24에 뒤집혔다.** `dispatch_a2a_withdrawal_request()`는 실제로
+> `services/po.py::transition()` → 발주 승인(`approve`) 경로에서 호출되고 있었다.
+> 다만 그 실행 경로에 진짜 버그가 하나 있었다 — `backend/a2a/payloads.py`가
+> `po.get("error_code", "")`로 값을 읽었는데, `po_drafts.error_code`가 `NULL`이면
+> 키는 존재하고 값만 `None`이라 `.get`의 default가 적용되지 않아 `null`이 그대로
+> payload에 실렸다. 이 계약(`request-withdrawal.json`)은 `error_code`를 non-null
+> 문자열로 요구해서 FinAllQ가 400 `schema_validation_failed`를 냈다. `po.get(
+> "error_code") or ""`로 수정해 해소했다. 아래는 수정 후 실제 왕복이다.
 
 ```mermaid
 sequenceDiagram
@@ -88,25 +112,24 @@ sequenceDiagram
     actor Mgr as 공장 팀장
     participant Router as MaintQ routers/po.py<br>POST /api/po/{id}/approve
     participant Svc as services/po.py::transition()
-    participant Dispatch as services/po.py::dispatch_a2a_withdrawal_request()<br>🔴 어디서도 호출 안 됨
-    participant FA as FinAllQ A2A 어댑터 (:9101, 프로토타입)
+    participant Dispatch as services/po.py::dispatch_a2a_withdrawal_request()<br>✅ 승인 경로에서 실제로 호출됨
+    participant FA as FinAllQ A2A 어댑터 (:9101)
 
-    Mgr->>Router: 발주 승인
+    Mgr->>Router: 발주 승인 (예: PO-0118)
     Router->>Svc: transition(po_id, "approved", ...)
-    Svc-->>Router: 상태 전이 완료 (DB만 갱신)
-    Note over Router,Dispatch: ⛔ 여기서 dispatch_a2a_withdrawal_request()를<br>호출하는 코드가 없다 — 함수는 존재하지만 죽은 코드다
-    Router-->>Mgr: 승인 완료 응답 (A2A 호출 없이 끝)
-
-    rect rgb(255, 230, 230)
-    Note over Dispatch,FA: 아래는 배선이 연결되면 동작할 "설계된 의도" — 아직 실행 안 됨
-    Dispatch->>FA: POST /a2a/skills/request-withdrawal
-    FA-->>Dispatch: 200 {status: input-required}
-    end
+    Svc-->>Router: 상태 전이 완료 (DB 갱신)
+    Router->>Dispatch: dispatch_a2a_withdrawal_request(po_id)
+    Dispatch->>FA: POST /a2a/skills/request-withdrawal<br>(error_code는 null이 아니라 "" — 2026-08-24 수정)
+    FA-->>Dispatch: 200 {status: ok, tool_payload: {status: input-required, req_id: "2655", pending_action: "finance-approval"}}
+    Dispatch->>Dispatch: traces에 tool_call/tool_result 기록
+    Router-->>Mgr: 승인 완료 응답
 ```
-`dispatch_a2a_withdrawal_request()`(payload 조립·`call_skill()` 호출·trace 기록까지
-전부 구현돼 있음) 자체는 잘 만들어져 있지만, **`transition()`이나 승인 라우터
-어디에서도 이 함수를 부르지 않는다.** 발주를 승인해도 지금은 아무 A2A 요청도
-나가지 않는다. 배선(호출 한 줄)과 테스트가 남은 작업이다.
+`dispatch_a2a_withdrawal_request()`(payload 조립·`call_skill()` 호출·trace 기록)는
+**실제로 승인 라우터 경로에서 호출되고, 실 FinAllQ 어댑터가 200 `input-required`
+(2단 결재 대기, 정상 비즈니스 응답)로 답하는 것까지 확인됐다.** 8개 pytest 파일
+(`backend/a2a/test_*.py` 등, 86/86 통과)과 `spikes/a2a_identity_contract.py`(19/19)로
+회귀도 걸려 있고, 전부 `master`에 커밋돼 있다 — v1.1이 "테스트 전무·전부 워킹
+트리에만 있음"이라 적었던 §⑦ 표는 그 시점 기준으로도 부정확했다(아래 §⑦ 갱신 참고).
 
 ---
 
@@ -144,8 +167,8 @@ graph TD
         FA_CORE["backend-core (Spring)<br>:8080"]
     end
 
-    MQ_A2A -- "HTTP" --> INSUQ_ADAPTER
-    MQ_A2A -- "HTTP (트리거 미연결)" --> FINALLQ_ADAPTER
+    MQ_A2A -- "HTTP (lookup-clause 코드 동작·자격증명 미설정으로 차단)" --> INSUQ_ADAPTER
+    MQ_A2A -- "HTTP (request-withdrawal·assess-loan ✅ E2E 성공, 2026-08-24)" --> FINALLQ_ADAPTER
     INSUQ_ADAPTER -- "HTTP" --> INSUQ_AI
     FINALLQ_ADAPTER -- "서비스 계정 로그인 + HTTP" --> FA_CORE
 ```
@@ -164,7 +187,7 @@ graph TD
 ```mermaid
 erDiagram
     SUPPLIER ||--o{ PO_DRAFT : supplies
-    PO_DRAFT ||--|| TRANSFER_REQUEST : "maps_to_A2A_S5 (🔴 미연결)"
+    PO_DRAFT ||--|| TRANSFER_REQUEST : "maps_to_A2A_S5 (✅ 실측 동작, 2026-08-24)"
 
     SUPPLIER {
         string supplier_id PK
@@ -244,24 +267,48 @@ sequenceDiagram
 
 | 구성요소 | 파일 | 상태 |
 |---|---|---|
-| 공용 HTTP 클라이언트 | `backend/a2a/client.py` | ✅ 구현됨 (미커밋) |
-| 인증 헤더 생성 | `backend/a2a/auth_header.py` | ✅ 구현됨 (미커밋) |
-| payload 조립 (`request-withdrawal`·`lookup-clause`) | `backend/a2a/payloads.py` | ✅ 구현됨 (미커밋) |
-| trace 기록 | `backend/a2a/trace.py` | ✅ 구현됨 (미커밋) |
-| `suppliers.account_number`·`bank_code` 컬럼 + 시드 | `data/seed.py` | ✅ 구현됨 (미커밋) — CP-002 갭 해소 |
-| `lookup-clause` 내부 API 엔드포인트 | `backend/routers/a2a.py`, `main.py` 등록 | ✅ **끝단까지 연결됨** (미커밋) |
-| `request-withdrawal` 트리거 배선 | `services/po.py::transition()` 또는 `routers/po.py` | 🔴 **호출하는 코드 없음 — 죽은 코드** |
-| 테스트 | (없음) | 🔴 **전무** |
-| 커밋 | — | 🔴 **전부 워킹 트리에만 있음** |
+| 공용 HTTP 클라이언트 | `backend/a2a/client.py` | ✅ 구현됨 · 커밋됨 |
+| 인증 헤더 생성 | `backend/a2a/auth_header.py` | ✅ 구현됨 · 커밋됨 (여전히 M1 목업 — §⑥) |
+| payload 조립 (`request-withdrawal`·`lookup-clause`·`assess-loan`) | `backend/a2a/payloads.py` | ✅ 구현됨 · 커밋됨 |
+| trace 기록 | `backend/a2a/trace.py` | ✅ 구현됨 · 커밋됨 |
+| `suppliers.account_number`·`bank_code` 컬럼 + 시드 | `data/seed.py` | ✅ 구현됨 · 커밋됨 — CP-002 갭 해소 |
+| `lookup-clause` 내부 API 엔드포인트 | `backend/routers/a2a.py`, `main.py` 등록 | ✅ **끝단까지 연결됨**(코드) · 🔴 자격증명 미설정으로 런타임 차단(사람 몫) |
+| `request-withdrawal` 트리거 배선 | `services/po.py::transition()` → `dispatch_a2a_withdrawal_request()` | ✅ **실제로 호출됨 — 승인 시 자동 발신, E2E 성공(200) 확인(2026-08-24)** |
+| `assess-loan` 트리거 + 엔드포인트 | `backend/routers/a2a.py::POST /api/a2a/assess-loan` | ✅ **끝단까지 연결됨, E2E 성공(200) 확인(2026-08-24)** — FinAllQ가 공식 계약대로 재구현 후 InsuQ 2차 홉까지 포함해 검증 |
+| 테스트 | `backend/a2a/test_*.py`(5) · `backend/routers/test_a2a.py` · `test_po_a2a_trigger.py` · `backend/services/test_po_a2a_dispatch.py` | ✅ **86/86 통과** + `spikes/a2a_identity_contract.py`(19/19) 등 회귀 |
+| 커밋 | `master` 브랜치 다수 커밋(예: `dcf538b` — request-withdrawal `error_code` null 버그 수정) | ✅ **전부 커밋됨, 워킹 트리 깨끗함** |
 
-**결론**: `lookup-clause` 경로는 실제로 동작하는 상태다(양쪽 서비스가 떠 있다면).
-`request-withdrawal` 경로는 잘 설계된 부품들이 다 있는데 마지막 한 줄(호출 배선)이
-빠져 있어 **아직 실행되지 않는다.** 두 경로 모두 자동화된 테스트가 없다는 점도
-남은 작업이다.
+**결론 (2026-08-24 갱신)**: `lookup-clause`·`request-withdrawal`·`assess-loan` **3개
+스킬 모두 코드가 끝단까지 연결돼 실제로 동작한다.** `lookup-clause`만 지금 실행하면
+막히는데, 이유는 코드가 아니라 MaintQ 쪽 서비스 자격증명이 아직 설정 안 된 것뿐이다
+(사람이 처리할 운영 항목). `request-withdrawal`은 이번에 실제 버그 하나(§②·2.2 참고)를
+찾아 고쳤고, `assess-loan`은 FinAllQ 쪽 계약 재작성 + InsuQ 2차 홉 구현으로 막혀 있던
+게 풀렸다 — 둘 다 실 어댑터 상대 성공 응답을 받았다. 자동화 테스트도 이미 충분히
+갖춰져 있다(86/86 pytest + 다수 스파이크).
+
+### 신규 — FinAllQ 추가 5스킬 (2026-08-24, MaintQ 발신 트리거 미착수)
+
+FinAllQ가 아래 5개 스킬의 요청/응답 계약을 확정하고 자기 쪽 수신 처리(inbound)를
+구현·curl 검증까지 마쳐 MaintQ 쪽에 공유했다. **MaintQ 쪽 발신 트리거(payload
+빌더 + 라우터)는 아직 하나도 없다** — 이번 시연 범위가 `request-withdrawal`·
+`assess-loan` 두 개로 확정돼 있어 시연 이후로 미뤄 둔 상태다(MaintQ
+`docs/07_BACKLOG.md` P34).
+
+| 스킬 | 시나리오(A2A_Q 번호) | FinAllQ 쪽 상태 | MaintQ 쪽 상태 |
+|---|---|---|---|
+| `advise-hedge` | S6 | ✅ 구현·curl 검증 완료 | 🔴 발신 트리거 미착수(시연 이후 예정) |
+| `advise-financing` | S16 | ✅ 구현·curl 검증 완료 | 🔴 발신 트리거 미착수(시연 이후 예정) |
+| `request-settlement` | S12 | ✅ 구현·curl 검증 완료 | 🔴 발신 트리거 미착수(시연 이후 예정) |
+| `assess-used-equipment-loan` | S13 | ✅ 구현·curl 검증 완료 | 🔴 발신 트리거 미착수(시연 이후 예정) |
+| `advise-replacement-financing` | S15(2차 홉 전용 — InsuQ `claim-insurance` 이후에만 호출) | ✅ 구현·curl 검증 완료 | 🔴 발신 트리거 미착수(시연 이후 예정) — MaintQ에 `claim-insurance` 호출 흐름 자체가 있는지도 확인 필요 |
 
 ---
 
 > **문서 맺음말**: 이 버전은 A2A_Q·InsuQ·FinAllQ·MaintQ 네 레포의 실제 소스코드를
 > 직접 읽고 검증해 작성했다(각 파일의 git diff·실제 함수 정의 확인). 이전 버전(v1.0)이
 > 주장했던 "구현 확정", 존재하지 않는 스킬(`loan-underwrite`), MaintQ의 A2A 수신
-> 어댑터, 실제와 다른 포트 번호는 이번 버전에서 제거·정정했다.
+> 어댑터, 실제와 다른 포트 번호는 v1.1에서 제거·정정했다. **v1.2(2026-08-24)**는
+> 반대 방향의 오류를 고쳤다 — v1.1이 "죽은 코드"·"미구현"으로 과소평가했던
+> `request-withdrawal`·`assess-loan`이 실은 실 어댑터 상대 E2E 성공까지 확인된
+> 상태였다(§②·§⑦). 실측 문서도 한쪽으로만 틀리지 않는다 — 과소평가도 과대평가만큼
+> 정정 대상이다.
