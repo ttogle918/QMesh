@@ -39,3 +39,24 @@ class RequestWithdrawalResponse(BaseModel):
     approved_by_finance: str | None = None
     executed_at: str | None = None
     reject_reason: str | None = None
+
+
+class AssessLoanRequest(BaseModel):
+    requester: Requester
+    request_chain_id: str
+    loan_amount: float
+    purpose: str
+    collateral_building_id: str
+
+
+class CollateralCheck(BaseModel):
+    coverage_amount: float | None = None
+    sufficient: bool | None = None
+
+
+class AssessLoanResponse(BaseModel):
+    status: Literal["completed"]
+    decision: Literal["approved", "conditional", "rejected"]
+    condition_note: str | None = None
+    collateral_check: CollateralCheck | None = None
+    market_context: dict | None = None
