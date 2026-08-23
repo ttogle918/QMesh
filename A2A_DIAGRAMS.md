@@ -44,9 +44,11 @@ flowchart TD
 ```
 
 > **MaintQ는 A2A 스킬을 노출하지 않는다** — 항상 요청을 시작하는 client다
-> (`docs/ref_maintq/A2A_CONTRACTS.md`). 지금까지 만든 두 어댑터(InsuQ `lookup-clause`,
-> FinAllQ `request-withdrawal`)는 전부 **수신자** 쪽이고, MaintQ 쪽엔 받는 어댑터가
-> 없다 — MaintQ가 각 어댑터를 호출하는 클라이언트 코드만 있다(§⑦).
+> (`docs/ref_maintq/A2A_CONTRACTS.md`). InsuQ `lookup-clause`·FinAllQ `request-withdrawal`은
+> **수신자** 쪽이고, MaintQ 쪽엔 받는 어댑터가 없다 — MaintQ가 각 어댑터를 호출하는
+> 클라이언트 코드만 있다(§⑦). 🆕 FinAllQ `assess-loan`(S8)은 그 반대다 — MaintQ의
+> 요청을 받는 수신자이면서 동시에 InsuQ `verify-collateral-insurance`를 2차 홉으로
+> 부르는 **발신자**이기도 하다(위 다이어그램 F→I 엣지).
 
 ---
 
