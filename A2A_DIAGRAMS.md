@@ -39,7 +39,7 @@ flowchart TD
 
     M -- "S5 request-withdrawal (🔴 트리거 미연결)<br>S6·S12·S16 (미구현)" --> F
     M -- "S7·S11·S14 (미구현)<br>lookup-clause (✅ 실동작)" --> I
-    F -- "S8·S13 verify-collateral-insurance (미구현 — 양쪽 어댑터 없음)" --> I
+    F -- "S8·S13 verify-collateral-insurance (FinAllQ 쪽 assess-loan 호출부 구현·InsuQ 쪽 수신부 미구현)" --> I
     I -- "S15 claim-insurance→advise-replacement-financing (미구현)" --> F
 ```
 
