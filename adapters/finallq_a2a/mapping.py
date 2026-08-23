@@ -48,3 +48,41 @@ def map_transfer_response(transfer_response: dict) -> dict:
         }
 
     raise ValueError(f"unknown FinAllQ TransferStatus: {status!r}")
+
+
+def map_loan_decision(insuq_response: dict, loan_amount: float) -> dict:
+    """verify-collateral-insurance 응답 -> assess-loan 판정 매핑 (design §① 표).
+
+    InsuQ 응답에 sufficient가 없으면(스키마상 필수 아님) coverage_amount와 loan_amount를
+    직접 비교해 계산한다 — 아직 구현되지 않은 InsuQ 엔드포인트의 선택 필드 보장에
+    의존하지 않는다.
+    """
+    status = insuq_response.get("status")
+    policy_valid = insuq_response.get("policy_valid", False)
+    coverage_amount = insuq_response.get("coverage_amount", 0)
+
+    if status == "rejected" or not policy_valid:
+        return {
+            "decision": "rejected",
+            "condition_note": insuq_response.get("rejection_reason"),
+            "collateral_check": {"coverage_amount": coverage_amount, "sufficient": False},
+        }
+
+    sufficient = insuq_response.get("sufficient")
+    if sufficient is None:
+        sufficient = coverage_amount >= loan_amount
+
+    if sufficient:
+        return {
+            "decision": "approved",
+            "condition_note": None,
+            "collateral_check": {"coverage_amount": coverage_amount, "sufficient": True},
+        }
+
+    return {
+        "decision": "conditional",
+        # 🔴 :g 포맷 금지 — 3억(300000000)처럼 큰 정수에 :g를 쓰면 "3e+08"(과학적 표기)로
+        # 깨진다(실측). 금액은 정수로 캐스팅해 그대로 찍는다.
+        "condition_note": f"보험 {int(coverage_amount)}→{int(loan_amount)} 증액 필요",
+        "collateral_check": {"coverage_amount": coverage_amount, "sufficient": False},
+    }
