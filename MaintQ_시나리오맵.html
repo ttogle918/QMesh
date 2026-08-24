@@ -193,7 +193,7 @@
       <p class="lede">제조 설비보전 파트 <b>MaintQ</b>의 독립 단독 페이지입니다.
       <br>공장 정비사가 진단부터 부품 발주, 설비 매각·취득 실사(S9·S10·S18), 수리 증빙(S29), 기한·위험 감시(F5·F6)까지 하나의 대화로 잇는 B2B 제조 보전 에이전트입니다. MVP(M1~M4) 및 Sprint 5~15를 완주하여 <b>도구 18종 · UI 라우트 18개 · 지원 기종 3종(iG5A·S100·IE5) · 회귀 1,097단언</b>이 구축되었습니다. 세 프로젝트 중 유일하게 회차 반복 실측 지표를 관리합니다.</p>
     </div>
-    <div class="asof">기준 시점<b>2026-08-21</b><span style="display:block;font-size:11px;margin-top:3px">MVP + Sprint 5~15 완주 반영</span></div>
+    <div class="asof">기준 시점<b>2026-08-24</b><span style="display:block;font-size:11px;margin-top:3px">MVP + Sprint 5~18 완주 반영</span></div>
   </header>
 
   <div class="status-legend">
@@ -234,7 +234,13 @@
           <span class="farrow">▶</span>
           <div class="fbox"><b>발주서 초안</b><span>주문서를 미리 써둠</span></div>
           <span class="farrow">▶</span>
-          <div class="fbox"><b>팀장 승인</b><span>사람이 최종 확인</span></div>
+          <div class="fbox"><b>팀장 승인</b><span>1차 확인</span></div>
+          <span class="farrow">▶</span>
+          <div class="fbox" style="border-color:var(--st-done)"><b>재무부 승인</b><span>2차 확인 · D119 신설, doc3 자동 렌더</span></div>
+        </div>
+        <div class="flow-row branch">
+          <span class="fbranch-tag">재무부 승인 시</span>
+          <div class="fbox" style="min-width:220px"><b>A2A 출금 요청 발신(S5)</b><span>이 시점으로 이동 — 팀장 승인 시점 아님</span></div>
         </div>
         <div class="flow-row branch">
           <span class="fbranch-tag">재고가 0이면</span>
@@ -352,20 +358,22 @@
     <div class="connect-note"><b>연결되는 지점</b> S10에서 담당자가 서명하는 순간, 통신 다이어그램의 S11(보험사에 알리기)과 S12(은행에 정산 요청)로 자동 연결될 수 있습니다. S18에서 담보대출이 필요하면 S13(멀티홉)이 시작됩니다. <b>S29의 수리 증빙은 S10의 근거 번들이 소비합니다</b> — "정비 이력이 이만큼 쌓여 있다"가 매각 협상의 근거가 되고, S7(화재보험 갱신)에서 InsuQ에 보내는 <b>고장이력</b>도 같은 데이터입니다. <b>F5·F6 감시 계층은 S7·S14 보험 위험 평가의 핵심 근거</b>가 됩니다.</div>
 
     <div class="connect-note" style="margin-top:14px"><b>진단 대상 기종 확장 (Sprint 14·15 완료)</b> 위 진단 → 발주 흐름은 원래 <b>iG5A · S100</b> 2기종 전용이었습니다. Sprint 14가 3번째 표준 매뉴얼(IE5)에서 트립 코드 5종(과전류·인버터 과부하·냉각핀 과열·과전압·저전압)을 실추출·사람 검수까지 완료했고, <b>Sprint 15(P11, D109)</b>가 <code>model</code> enum을 3종으로 넓혀 <code>lookup_error_code</code> 등 정의 조회 경로에 IE5를 편입했습니다(정본 병합 완료, <code>error_codes</code> 65→70건). ⚠ 안전 경고 문구(매뉴얼 근거 미검증)·RAG 절차 조회(청킹 미착수)·실물 설비 등록(<code>equipment.model</code> CHECK 는 여전히 2종)은 <b>의도적으로 이번 확장 범위 밖</b>입니다 — "모른다"를 정직하게 답하는 이 프로젝트의 원칙(S4)이 새 기종에도 그대로 적용됩니다.</div>
+
+    <div class="connect-note" style="margin-top:14px"><b>🆕 재무부 승인 게이트 신설 — S1·S5 발신 시점 변경 (2026-08-24, D119).</b> 팀장 승인(1차) 다음에 <b>MaintQ 자체 재무부 승인(2차)</b> 단계가 새로 생겼습니다 — 예산 한도·1일 누적 한도·FDS(이상거래탐지)·SoD(직무분리) 4종 내부통제 판정을 재무부 소속 계정(<code>department=="finance"</code>)만 통과시킬 수 있습니다. <b>이 변경이 A2A와 직결됩니다</b>: FinAllQ로 나가는 출금 요청(<code>request-withdrawal</code>, S5)이 이제 <b>팀장 승인이 아니라 재무부 승인 시점에 발신</b>됩니다(<code>POST /api/po/{id}/approve</code>는 더 이상 A2A를 발신하지 않고, 새 <code>POST /api/po/{id}/finance-approve</code>가 그 자리를 대신함). payload 스키마 자체는 무변경 — <code>approved_by</code>는 여전히 팀장 ID입니다. 재무부 승인 시 사람 승인용 3번째 문서(<b>자금집행요청서, doc3</b>)도 함께 자동 렌더됩니다(D118이 미뤄뒀던 항목). 상세 시퀀스는 <a href="docs/presentation/a2a-contract-and-data-flow.html#s4">a2a-contract-and-data-flow.html §4.1</a> 참고.</div>
   </section>
 
   <!-- ================= ② MaintQ 구현 현황 ================= -->
   <section class="slide" id="maintq-status">
-    <div class="sec-head"><h2>② MaintQ는 지금 어디까지 왔나</h2><span class="count">Sprint 1~15 완주 · 2026-08-21 실측</span></div>
-    <p class="sec-note">FinAllQ가 <b>"레일은 깔렸고 문이 없다"</b>, InsuQ가 <b>"답하는 능력은 됐고 조회할 대장이 없다"</b>였다면 — MaintQ는 <b>"MVP(M1~M4) 및 확장 Sprint 5~15 전수를 완주하여 도구 18종과 18개 라우트가 가동 중"</b>입니다. <b>2026-08-12 related_parts 사람 최종 승인</b>으로 D12 게이트가 해제되어 5지표 모두 판정 가능해졌으며, 세 프로젝트 중 <b>유일하게 지표를 회차 반복으로 측정</b>합니다. <b>2026-08-20 부서·권한 분리(D108)</b>로 재무부 계정 축이 생겼고, <b>Sprint 15(P11)</b>가 끝나 <b>3번째 기종 IE5</b>가 <code>lookup_error_code</code> 조회 경로에 편입됐습니다(안전 문구·RAG·물리 자산은 의도적으로 범위 밖).</p>
+    <div class="sec-head"><h2>② MaintQ는 지금 어디까지 왔나</h2><span class="count">Sprint 1~18 완주 · 2026-08-24 실측</span></div>
+    <p class="sec-note">FinAllQ가 <b>"레일은 깔렸고 문이 없다"</b>, InsuQ가 <b>"답하는 능력은 됐고 조회할 대장이 없다"</b>였다면 — MaintQ는 <b>"MVP(M1~M4) 및 확장 Sprint 5~18 전수를 완주하여 도구 20종과 21개 라우트가 가동 중"</b>입니다. <b>2026-08-12 related_parts 사람 최종 승인</b>으로 D12 게이트가 해제되어 5지표 모두 판정 가능해졌으며, 세 프로젝트 중 <b>유일하게 지표를 회차 반복으로 측정</b>합니다. <b>2026-08-20 부서·권한 분리(D108)</b>로 재무부 계정 축이 생겼고, <b>Sprint 15(P11)</b>가 끝나 <b>3번째 기종 IE5</b>가 <code>lookup_error_code</code> 조회 경로에 편입됐습니다(안전 문구·RAG·물리 자산은 의도적으로 범위 밖). <b>Sprint 17(D119)</b>이 D108의 재무부 계정 축을 실제 승인 게이트로 완성했고, <b>Sprint 18</b>은 정비사 랜딩 화면을 챗봇에서 설비 이상탐지 대시보드로 바꿨습니다.</p>
 
     <div class="statgrid">
-      <div class="statbox"><b>15</b><span>완료 스프린트 <span style="font-size:10px">(M1~M4 + S5~15)</span></span></div>
-      <div class="statbox"><b>18</b><span>MCP 도구 <span style="font-size:10px">(코어 7 · 확장 11)</span></span></div>
-      <div class="statbox"><b>18</b><span>UI 라우트 <span style="font-size:10px">(Next.js build 실측)</span></span></div>
+      <div class="statbox"><b>18</b><span>완료 스프린트 <span style="font-size:10px">(M1~M4 + S5~18)</span></span></div>
+      <div class="statbox"><b>20</b><span>MCP 도구 <span style="font-size:10px">(코어 7 · 확장 13)</span></span></div>
+      <div class="statbox"><b>21</b><span>UI 라우트 <span style="font-size:10px">(Next.js build 실측)</span></span></div>
       <div class="statbox"><b>3</b><span>지원 기종 <span style="font-size:10px">(iG5A·S100·IE5, D109)</span></span></div>
-      <div class="statbox"><b>1,097</b><span>회귀 단언 <span style="font-size:10px">(32스위트 977 + seed 37 + pytest 83, 실측 2026-08-21)</span></span></div>
-      <div class="statbox"><b>109</b><span>설계 결정 D1~D109</span></div>
+      <div class="statbox"><b>1,279</b><span>회귀 단언 <span style="font-size:10px">(33스위트 1,069 + seed 41 + pytest 169, 실측 2026-08-24)</span></span></div>
+      <div class="statbox"><b>119</b><span>설계 결정 D1~D119</span></div>
       <div class="statbox"><b>24</b><span>DB 테이블 <span style="font-size:10px">(코어 11 + 확장 13)</span></span></div>
       <div class="statbox"><b>8/8</b><span>법령 조문 실수집 <span style="font-size:10px">(8,197자)</span></span></div>
       <div class="statbox"><b>3</b><span>A2A 실통신 완료 <span style="font-size:10px">(S5 출금·약관조회·S13/S8 담보대출)</span></span></div>
@@ -383,7 +391,7 @@
     <div class="subhead" style="margin-top:30px">시나리오별 진행도 — MaintQ가 관여하는 것만</div>
     <div class="board">
       <div class="prog-list">
-        <div class="prog-row"><span class="prog-id done">S1</span><span class="prog-name">진단 → 재고 → 견적 → <b>발주서 초안</b> → 팀장 승인</span><span class="prog-bar"><i class="done" style="width:100%"></i></span><span class="prog-pct">구현됨</span></div>
+        <div class="prog-row"><span class="prog-id done">S1</span><span class="prog-name">진단 → 재고 → 견적 → <b>발주서 초안</b> → 팀장 승인 → 재무부 승인(D119)</span><span class="prog-bar"><i class="done" style="width:100%"></i></span><span class="prog-pct">구현됨</span></div>
         <div class="prog-row"><span class="prog-id done">S2</span><span class="prog-name">재고 0 → 대체품 탐색 · 비교 (related_parts 승인 완료)</span><span class="prog-bar"><i class="done" style="width:100%"></i></span><span class="prog-pct">구현됨 <em>· D12 게이트 해제</em></span></div>
         <div class="prog-row"><span class="prog-id done">S3</span><span class="prog-name">반복 고장(30일 3회) → 근본원인 모드 · <b>발주 보류</b></span><span class="prog-bar"><i class="done" style="width:100%"></i></span><span class="prog-pct">구현됨 <em>· 시퀀스 100%</em></span></div>
         <div class="prog-row"><span class="prog-id done">S4</span><span class="prog-name">미지 코드 → <b>「모른다」</b> · 유사 코드 추측 금지</span><span class="prog-bar"><i class="done" style="width:100%"></i></span><span class="prog-pct">구현됨 <em>· 환각 0.0%</em></span></div>
@@ -393,7 +401,7 @@
         <div class="prog-row"><span class="prog-id done">S29</span><span class="prog-name">수리 완료 → <b>증빙 서명</b> (create_repair_record · 승인 큐)</span><span class="prog-bar"><i class="done" style="width:100%"></i></span><span class="prog-pct">구현됨 <em>· Sprint 9 완료 (D98)</em></span></div>
         <div class="prog-row"><span class="prog-id done">F5·F6</span><span class="prog-name">기한·사고·위험 감시 계층 (track_deadlines · assess_risk_grade)</span><span class="prog-bar"><i class="done" style="width:100%"></i></span><span class="prog-pct">구현됨 <em>· Sprint 11 완료 (D102)</em></span></div>
         <div class="prog-row"><span class="prog-id prog">S17</span><span class="prog-name">법령 개정 감지 → 사람 확인 후 룰 갱신</span><span class="prog-bar"><i class="done" style="width:70%"></i><i class="todo" style="width:30%"></i></span><span class="prog-pct">수집·대조 O <em>· 도구 노출 v2 제외</em></span></div>
-        <div class="prog-row sep"><span class="prog-id done">S5</span><span class="prog-name">출금 요청 — MaintQ→FinAllQ (2단 승인 연계)</span><span class="prog-bar"><i class="done" style="width:100%"></i></span><span class="prog-pct">구현됨 <em>· E2E 실통신 완료, 2026-08-24 error_code null 버그 수정</em></span></div>
+        <div class="prog-row sep"><span class="prog-id done">S5</span><span class="prog-name">출금 요청 — MaintQ→FinAllQ (3단 결재: 팀장→MaintQ 재무부→FinAllQ 재무결재)</span><span class="prog-bar"><i class="done" style="width:100%"></i></span><span class="prog-pct">구현됨 <em>· E2E 실통신 완료, 2026-08-24 발신 시점이 재무부 승인(D119)으로 이동</em></span></div>
         <div class="prog-row"><span class="prog-id done">A2A</span><span class="prog-name">약관 근거 실시간 질의 — MaintQ→InsuQ (lookup-clause)</span><span class="prog-bar"><i class="done" style="width:100%"></i></span><span class="prog-pct">구현됨 <em>· 코드는 동작, 현재 자격증명 미설정으로 런타임 차단(사람 몫)</em></span></div>
         <div class="prog-row"><span class="prog-id crit">S7</span><span class="prog-name">화재보험 갱신 — 고장이력 첨부 → InsuQ</span><span class="prog-bar"><i class="done" style="width:30%"></i><i class="todo" style="width:70%"></i></span><span class="prog-pct">이력 데이터 O <em>· 창구 0</em></span></div>
 
@@ -624,8 +632,8 @@
 
   <footer>
     <span>Q 시리즈 · MaintQ 시나리오 & 구현 현황 지도</span>
-    <span>기준 2026-08-21</span>
-    <span>MVP + Sprint 5~15 완주 — MCP 도구 18 · UI 라우트 18 · 지원 기종 3(iG5A·S100·IE5) · 회귀 단언 1,097 (32스위트 977) · 설계 결정 D1~D109 · DB 24테이블</span>
+    <span>기준 2026-08-24</span>
+    <span>MVP + Sprint 5~18 완주 — MCP 도구 20 · UI 라우트 21 · 지원 기종 3(iG5A·S100·IE5) · 회귀 단언 1,279 (33스위트 1,069) · 설계 결정 D1~D119 · DB 24테이블</span>
   </footer>
 
 </div>
@@ -635,11 +643,11 @@
 <script>
 (function(){
   var SCN = {
-    S1:  { title:'S1 · 진단→재고→발주 파이프라인', status:'done', important:false, desc:'설비 고장 진단 → 부품 확인 → 재고/가격 → 발주서 초안 → 팀장 승인 기본 흐름 (완료).' },
+    S1:  { title:'S1 · 진단→재고→발주 파이프라인', status:'done', important:false, desc:'설비 고장 진단 → 부품 확인 → 재고/가격 → 발주서 초안 → 팀장 승인 → 재무부 승인(D119) 기본 흐름 (완료).' },
     S2:  { title:'S2 · 대체품 탐색', status:'done', important:false, desc:'재고 부족 시 대체 부품 탐색 및 비교 (related_parts 승인 완료, D12 게이트 해제).' },
     S3:  { title:'S3 · 반복고장 → 근본원인 점검', status:'done', important:false, desc:'30일 3회 반복 고장 시 근본원인 점검 모드 전환 (완료).' },
     S4:  { title:'S4 · 미지 코드 → 한계 인정', status:'done', important:false, desc:'미지 에러코드 정직한 모른다 응답 및 A/S 안내 (환각률 0.0%).' },
-    S5:  { title:'S5 · 출금 요청 (2단 승인)', status:'done', important:false, desc:'MaintQ→FinAllQ 출금 요청 (발신 클라이언트 + FinAllQ 어댑터 E2E 실통신 완료).' },
+    S5:  { title:'S5 · 출금 요청 (3단 결재)', status:'done', important:false, desc:'MaintQ→FinAllQ 출금 요청 (발신 클라이언트 + FinAllQ 어댑터 E2E 실통신 완료). 2026-08-24부터 발신 시점이 팀장 승인이 아니라 MaintQ 재무부 승인(D119)으로 이동.' },
 
     S6:  { title:'S6 · 환헤지 · 자금운용 상담', status:'todo', important:false, desc:'자금운용 상담 (MaintQ→FinAllQ). FinAllQ 수신부(advise-hedge)는 2026-08-24 구현·검증 완료, MaintQ 발신 트리거 미착수.' },
     S7:  { title:'S7 · 화재보험 갱신 상담', status:'todo', important:true, desc:'공장 화재보험 갱신 상담 (MaintQ→InsuQ, 고장이력 연계).' },
