@@ -347,6 +347,9 @@
       <li><code>verify-collateral-insurance</code>의 <code>effective_recovery</code> 필드(지금까지 항상 <code>null</code>)를 <code>claim-insurance</code>가 쓰던 비례보상 공식(손해액 × coverage_amount / (insured_value × coinsurance_ratio))으로 구현 완료. <code>docs/A2A_API_SPEC.md</code>의 단순화된 공식 표기(coinsurance_ratio 누락)도 정정.</li>
       <li>인덱서의 <code>recreate: false</code> 증분 인덱싱 검증 로직 버그(완전일치 비교 → 부분집합 비교)를 발견·수정. 트랙4(화재보험)에 주택화재보험·성공예감·비즈앤안전파트너·아파트안심보험 4개 상품을 증분 인덱싱해 Qdrant Cloud <code>insuq_track4</code> 컬렉션이 <b>2,214 → 6,505 포인트</b>가 됨.</li>
       <li>테스트 카운트: backend <b>398 → 423건</b>(+25) · ai-engine <b>875 → 904건</b>(+29) · frontend vitest <b>77 → 114건</b>(+37), 전부 0 failures.</li>
+      <li><b>2026-08-24(같은 날 이어서) — <code>lookup-clause</code> 어댑터를 docker-compose에 편입 + 이 페이지가 "E2E 완료"라고 적어둔 바로 그 통신 경로에서 실제 버그를 발견·수정했습니다.</b> <code>a2a_adapter/</code>(:9102)가 지금까지 compose에 없어 수동 <code>uvicorn</code> 실행이 필요했던 것을 Dockerfile 신규 작성 + <code>docker-compose.yml</code> 서비스 편입으로 해소했습니다. 편입 검증 중 도커 네트워크로 <code>lookup-clause</code>를 실제로 호출해보니, <code>insuq_client.py::call_qa()</code>의 upstream 타임아웃이 <b>10초</b>로 박혀 있어 — HyDE·도구 호출 루프가 붙은 실제 파이프라인은 그보다 오래 걸리는데(ai-engine <code>/qa</code> 자체는 200으로 정상 응답), 어댑터가 먼저 <b>504</b>로 포기하는 것을 재현했습니다. backend의 <code>insuq.ai-engine.timeout</code>(45초)과 맞춰 상향 수정한 뒤 같은 요청을 재시도해 근거 조항 인용 + 3단계 판정 문구까지 정상 200으로 받는 것을 확인했습니다. 이 문서 위쪽(② 표·진행도)이 "구현 완료·E2E 완료"라고 적어둔 것 자체는 여전히 맞지만, <b>그 경로가 실제로는 타임아웃 경계값 근처에서 조용히 실패할 수 있었다</b>는 점을 정정해 둡니다.</li>
+      <li><b>2026-08-24 — <code>verify-collateral-insurance</code>를 실제 데모 시나리오 숫자로 재검증.</b> <code>BLD-A</code>(대한물류 인천 물류센터) seed 데이터(<code>coverage_amount</code> 3억 / <code>insured_value</code> 5억 / 부보비율 0.8)를 대상으로 <code>required_coverage=5억</code>을 보내는 실제 curl 호출로 <code>sufficient:false</code>(3억&lt;5억=부족)까지 재확인했습니다. <code>evidence</code> 필드가 실제 조항 인용이 아니라 정책 레코드 요약 문자열이라는 이 문서 아래쪽(TASK-H08)의 기존 서술은 오늘도 그대로 재현됩니다 — 데모 슬라이드가 "약관 조항 인용 첨부"를 보여줄 계획이면 이 필드를 그대로 노출하지 말 것.</li>
+      <li>Sprint 15(트랙7 A2A 범위 밖, 트랙1 핵심 품질) — 검색 baseline을 LangGraph 전환 후 공식 재확립(Hit@5 0.8148 lenient 확정) · 조항 검색 도구(<code>search_clauses</code>·<code>get_article</code>)를 MCP 서버로 신규 노출 · 답변에 면책 조항을 근거로 자동 병기(단정 유발 없음, 정성 스팟체크 5/5). InsuQ 레포 <code>docs/sprints/sprint-15.md</code> 참고 — 이 스킬 5종 계약과는 무관해 이 페이지 본문은 안 건드림.</li>
       <li><b>InsuQ 프로덕션 배포판(<code>insuq-backend.onrender.com</code>) 재배포 + 실측 검증 완료.</b> <code>CustomerSeeder</code>가 <code>@Profile("dev")</code>라 배포판엔 A2A 데모 fixture가 자동으로 안 들어가서, Flyway <code>V7</code>(건물·정책·파트너 그랜트)·<code>V8</code>(심사역 계정)로 정식 마이그레이션을 추가했다(로컬 Postgres 17에서 사전 검증 후 적용). 그 결과 <code>verify-collateral-insurance</code>·<code>notify-risk-change</code>·<code>claim-insurance</code>(승인 큐 전체 생애주기 포함) 전부 <b>프로덕션 URL 상대로 curl 직접 검증</b> — 로컬 dev에서 확인한 수치와 정확히 일치. <b>더 나아가 FinAllQ의 실제 <code>a2a_adapter/insuq_client.py</code> 코드를 한 글자도 안 고치고 그대로 실행해 InsuQ 프로덕션 URL을 호출</b>했고, FinAllQ 코드 내부의 응답 타입 검증까지 통과했다 — 로컬 어댑터 흉내가 아니라 두 시스템의 <b>실제 배포판끼리 인터넷으로 통신</b>한 첫 실측이다. 단, <code>notify-risk-change</code>는 InsuQ 수신부만 검증된 것이고 <b>MaintQ 쪽 발신 코드(<code>backend/a2a/payloads.py</code>)는 아직 없다</b>(직접 grep 확인) — InsuQ는 받을 준비가 됐지만 MaintQ가 아직 안 부른다.</li>
     </ul>
     최신 상태는 InsuQ 레포의 <code>docs/status_audit.html</code>·<code>docs/status.html</code>을 참고하세요 (main 최신 커밋 <code>448c50d</code>).</div>
@@ -417,8 +420,8 @@
             <td><code>lookup-clause</code><br><span style="color:var(--ink-faint)">약관 근거 실시간 조회 (A2A)</span></td>
             <td>—</td>
             <td>약관 코퍼스 + 검색 + 인용 + 거부 + <b>A2A 어댑터(:9102)</b></td>
-            <td><span class="vchip adopt">구현 완료</span><br>A2A 어댑터(:9102) 및 MaintQ 연동 E2E 실통신 완료. 트랙1 Hit@5 0.8148 · 거부 1.0 · 되묻기 1.0</td>
-            <td><b>완료</b> (어댑터 및 스키마 완비)</td>
+            <td><span class="vchip adopt">구현 완료</span><br>A2A 어댑터(:9102) 및 MaintQ 연동 E2E 실통신 완료. 트랙1 Hit@5 0.8148 · 거부 1.0 · 되묻기 1.0<br><span style="color:#c99b2c">2026-08-24: docker-compose 편입 + upstream 타임아웃 10s→45s 수정(504 오탐 실측·재현·해소)</span></td>
+            <td><b>완료</b> (어댑터·스키마·compose 배포 전부 완비)</td>
           </tr>
 
           </tbody>
@@ -729,6 +732,7 @@
     <span>InsuQ 수치는 저장소 실측(Sprint 1~12 완료, 커밋 <code>9851de1</code>) — 엔드포인트 22 · 화면 6 · 테스트 875 · 골든셋 96 · 실험 52</span>
     <span>Sprint 13(backend Java 398테스트, A2A 5종 중 4종 구현)은 InsuQ 저장소 <code>docs/sprints/sprint-13.md</code> 실측</span>
     <span>A2A 계약(Agent Card · 스킬 스키마 5종)은 이 저장소 <code>docs/agent_cards/</code> · <code>docs/schemas/</code> 실측</span>
+    <span style="color:#c99b2c">2026-08-24 추가 갱신: lookup-clause 어댑터 docker-compose 편입 + upstream 타임아웃 버그 수정, verify-collateral-insurance 데모 숫자 재검증, Sprint 15(검색 baseline 재확립·MCP 서버·면책조항 자동병기) — InsuQ 저장소 PR #13·#14·#15 실측</span>
   </footer>
 
 </div>
