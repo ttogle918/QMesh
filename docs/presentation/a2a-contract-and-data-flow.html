@@ -486,8 +486,8 @@ sequenceDiagram
     </section>
 
     <section class="section" id="s5">
-        <h2>5. 인증 헤더 흐름 (M1 목업)</h2>
-        <p>M1(현재) 단계는 목업 인증이다 — 실제 토큰 검증은 아직 어댑터에 없다.</p>
+        <h2>5. 인증 헤더 흐름</h2>
+        <p class="lede">🆕 <strong>정정(2026-08-24, MaintQ D120).</strong> 이 절은 원래 "M1은 목업 인증, 나중에 Basic(client_id/secret) 실토큰 교환이 붙는다"고 적혀 있었다 — 설계 당시엔 그게 계획이었다. MaintQ가 InsuQ·FinAllQ 레포의 실제 인증 필터를 직접 열어 대조한 결과, 양쪽 다 애초에 Basic이 아니라 <code>Authorization: Bearer &lt;token&gt;</code> + <code>X-A2A-Partner-Id</code> 자기신고 헤더만 검사하고 있었다(FinAllQ→InsuQ 2차 홉이 이미 이 스킴으로 실 성공 중이었음). MaintQ는 <code>credentials.py</code>·<code>auth_header.py</code>를 이 실제 스킴에 맞춰 재작성했다 — 아래 다이어그램은 그 결과다.</p>
         <div class="diagram-box"><pre class="mermaid">
 sequenceDiagram
     participant Caller as MaintQ 호출부 (client.py)
@@ -498,13 +498,13 @@ sequenceDiagram
     Caller->>AuthHdr: build_auth_header("finallq")
     AuthHdr->>Cred: load("finallq")
     Cred-->>AuthHdr: PartnerCredential status
-    alt usable (client_id secret 둘 다 설정됨)
-        AuthHdr-->>Caller: Authorization Basic base64
-    else not_configured (현재 실제 상태)
+    alt usable (SERVICE_TOKEN 설정됨)
+        AuthHdr-->>Caller: Authorization Bearer token, X-A2A-Partner-Id
+    else not_configured
         AuthHdr-->>Caller: 헤더 없음
     end
-    Caller->>Adapter: POST a2a/skills/id (헤더 있든 없든 전송)
-    Note over Adapter: 두 어댑터 모두 이 헤더를 검사하지 않는다 (M1 목업)
+    Caller->>Adapter: POST a2a/skills/id
+    Note over Adapter: InsuQ ServiceTokenFilter FinAllQ 실 필터는 이 스킴을 검사한다. 단 InsuQ lookup-clause 임시 어댑터(9102)는 이 필터 자체가 없다.
         </pre></div>
     </section>
 
@@ -528,7 +528,7 @@ graph TD
     end
 
     subgraph FINALLQ_REPO ["FinAllQ 레포 - 실제 백엔드"]
-        FA_CORE["backend-core (Spring) :8080"]
+        FA_CORE["backend-core (Spring) :8082"]
     end
 
     MQ_A2A -- HTTP --> INSUQ_ADAPTER
@@ -537,6 +537,7 @@ graph TD
     FINALLQ_ADAPTER -- 서비스 계정 로그인 + HTTP --> FA_CORE
         </pre></div>
         <p class="lede"><strong>MaintQ는 A2A 수신 포트가 없다</strong> — 스킬을 노출하지 않으므로. A2A_Q 프로토타입 어댑터(:9101·:9102)는 최종적으로 각 레포(FinAllQ·InsuQ)로 이관될 자리이며, 계약 스키마(SSOT)는 계속 A2A_Q에 남는다.</p>
+        <p class="lede">🆕 <strong>포트 정정(2026-08-24).</strong> <code>FA_CORE</code>는 <code>:8080</code>으로 적혀 있었으나 FinAllQ <code>infra/docker-compose.yml</code> 실측 결과 <code>backend-core</code>는 <code>:8082</code>(내부·외부 동일)로 노출된다 — <code>a2a_adapter/main.py</code>의 <code>FINALLQ_BASE_URL</code> 기본값(<code>http://localhost:8080</code>)이 실제 배포 포트와 어긋난 상태다. 또한 lookup-clause가 실제로 동작하는 곳은 <code>INSUQ_SPRING</code>(:8081, 여전히 501)이 아니라 <code>INSUQ_ADAPTER</code>(:9102)인데, 이 어댑터는 이제 A2A_Q 프로토타입이 아니라 <strong>InsuQ 자기 레포 안으로 포크된 사본</strong>이다(InsuQ <code>a2a_adapter/</code>) — InsuQ <code>docs/07_BACKLOG.md</code> H9가 원본과의 중복 정리를 미결로 남겨두고 있다.</p>
     </section>
 
     <section class="section" id="s7">
@@ -544,14 +545,14 @@ graph TD
         <p class="lede">MaintQ는 아직 진행 중인 프로젝트라 여기서는 요약만 남긴다. 상세는 레포 루트의 <code>A2A_DIAGRAMS.md</code> §⑦ 참고.</p>
         <ul>
             <li><strong>역할:</strong> 스킬을 노출하지 않는 항상 client. 발주 승인·처분·수리 이벤트가 트리거가 되어 FinAllQ/InsuQ로 요청을 보낸다.</li>
-            <li><strong>끝단까지 연결되어 동작 확인된 것:</strong> <code>lookup-clause</code>(InsuQ), <code>request-withdrawal</code>(FinAllQ), <code>assess-loan</code>(FinAllQ→InsuQ 2차 홉) — 3개 스킬 모두 실 어댑터 상대 E2E 성공(200) 확인.</li>
+            <li><strong>끝단까지 연결되어 동작 확인된 것:</strong> <code>request-withdrawal</code>(FinAllQ), <code>assess-loan</code>(FinAllQ→InsuQ 2차 홉) — 실 어댑터 상대 E2E 성공(200) 확인. <code>lookup-clause</code>(InsuQ)도 이제 여기 속한다 — 아래 참고.</li>
             <li><strong>계약만 정의되고 발신 코드가 아직 없는 것:</strong> <code>advise-hedge</code>(S6)·<code>request-settlement</code>(S12)·<code>assess-used-equipment-loan</code>(S13)·<code>advise-financing</code>(S16)·<code>notify-asset-change</code>(S11)·<code>notify-risk-change</code>(S14)·<code>claim-insurance</code>(S15) — 상대 쪽 수신부는 준비되어 있으나 MaintQ 쪽 트리거가 없다.</li>
-            <li><strong>막힌 것 1건:</strong> <code>lookup-clause</code>는 코드는 동작하지만 MaintQ 쪽 서비스 자격증명이 아직 설정되지 않아 실행 시 차단된다(운영 항목이지 코드 문제 아님).</li>
+            <li><strong>lookup-clause — 정정(2026-08-24).</strong> "MaintQ 쪽 서비스 자격증명이 아직 설정되지 않아 차단된다"는 서술은 틀렸다 — 진짜 원인은 <strong>InsuQ가 스킬 자체를 미구현</strong>(501 고정)이었던 것이고, 이제 InsuQ <code>:9102</code> 어댑터를 통해 실제로 응답한다. 단 이 어댑터엔 인증 헤더 검증이 없고, InsuQ의 "정식" 수신부(Spring <code>:8081</code>)는 여전히 501이라 최종 위치는 InsuQ 쪽 결정 대기(H9).</li>
         </ul>
         <div class="tbl-wrap">
         <table>
             <tr><th>스킬</th><th>시나리오</th><th>상태</th></tr>
-            <tr><td>lookup-clause</td><td>-</td><td><span class="badge badge-warn">코드 연결됨 · 자격증명 미설정으로 차단</span></td></tr>
+            <tr><td>lookup-clause</td><td>-</td><td><span class="badge badge-ok">임시 어댑터(:9102)에서 응답 · 정식 수신부(:8081)는 501</span></td></tr>
             <tr><td>request-withdrawal</td><td>S5</td><td><span class="badge badge-ok">E2E 성공 확인</span></td></tr>
             <tr><td>assess-loan</td><td>S8</td><td><span class="badge badge-ok">E2E 성공 확인 (2차 홉 포함)</span></td></tr>
             <tr><td>advise-hedge / advise-financing / request-settlement / assess-used-equipment-loan / notify-asset-change / notify-risk-change / claim-insurance</td><td>S6·S11·S12·S13·S14·S15·S16</td><td><span class="badge badge-blocked">MaintQ 발신 트리거 미착수</span></td></tr>

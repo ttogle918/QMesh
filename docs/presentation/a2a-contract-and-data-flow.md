@@ -350,7 +350,14 @@ sequenceDiagram
 
 ## 5. 인증 헤더 흐름
 
-M1(현재) 단계는 목업 인증이다 — 실제 토큰 검증은 아직 어댑터에 없다.
+> **🆕 정정(2026-08-24, MaintQ D120).** 이 절은 원래 "M1은 목업 인증, 나중에 Basic(client_id/secret)
+> 실토큰 교환이 붙는다"고 적혀 있었다 — 설계 당시엔 그게 계획이었다. **MaintQ가 InsuQ·FinAllQ 레포의
+> 실제 인증 필터를 직접 열어 대조한 결과, 양쪽 다 애초에 Basic이 아니라
+> `Authorization: Bearer <token>` + `X-A2A-Partner-Id` 자기신고 헤더만 검사하고 있었다**
+> (FinAllQ→InsuQ 2차 홉이 이미 이 스킴으로 실 성공 중이었음). MaintQ는 `credentials.py`·
+> `auth_header.py`를 이 실제 스킴에 맞춰 재작성했다 — 아래 다이어그램은 그 결과다. 이 문서(SSOT)의
+> 원래 계획(Basic)이 실제 구현과 달랐던 것이므로, 다음에 이 흐름을 설계할 때는 계약을 먼저
+> 각 파트너의 실제 필터 코드와 대조하는 절차를 넣을 것을 권한다.
 
 ```mermaid
 sequenceDiagram
@@ -362,13 +369,13 @@ sequenceDiagram
     Caller->>AuthHdr: build_auth_header("finallq")
     AuthHdr->>Cred: load("finallq")
     Cred-->>AuthHdr: PartnerCredential(status=...)
-    alt usable (client_id·secret 둘 다 설정됨)
-        AuthHdr-->>Caller: {"Authorization": "Basic base64(id:secret)"}
-    else not_configured (현재 실제 상태)
+    alt usable (<PARTNER>_SERVICE_TOKEN 설정됨)
+        AuthHdr-->>Caller: {"Authorization": "Bearer <token>", "X-A2A-Partner-Id": "maintq-agent"}
+    else not_configured
         AuthHdr-->>Caller: {} (헤더 없음)
     end
-    Caller->>Adapter: POST .../a2a/skills/{id} (헤더 있든 없든 전송)
-    Note over Adapter: 🔴 두 어댑터 모두 이 헤더를 검사하지 않는다(M1 목업).<br>나중에 실제 토큰 교환이 붙으면 build_auth_header() 내부만 바뀐다.
+    Caller->>Adapter: POST .../a2a/skills/{id}
+    Note over Adapter: InsuQ ServiceTokenFilter·FinAllQ 실 필터는 이 스킴을 검사한다.<br>단, InsuQ lookup-clause가 실제로 동작하는 임시 FastAPI 어댑터(:9102)는<br>이 필터 자체가 없어 헤더 검증이 아직 실전 검증되지 않았다(§7 참고).
 ```
 
 ---
@@ -393,7 +400,7 @@ graph TD
     end
 
     subgraph FINALLQ_REPO ["FinAllQ 레포 — 실제 백엔드"]
-        FA_CORE["backend-core (Spring) :8080"]
+        FA_CORE["backend-core (Spring) :8082"]
     end
 
     MQ_A2A -- "HTTP" --> INSUQ_ADAPTER
@@ -403,6 +410,21 @@ graph TD
 ```
 
 > **MaintQ는 A2A 수신 포트가 없다** — 스킬을 노출하지 않으므로. A2A_Q 프로토타입 어댑터(`:9101`·`:9102`)는 최종적으로 각 레포(FinAllQ·InsuQ)로 이관될 자리이며, 계약 스키마(SSOT)는 계속 A2A_Q에 남는다.
+>
+> **🆕 포트 정정(2026-08-24)**: `FA_CORE`는 `:8080`으로 적혀 있었으나 FinAllQ `infra/docker-compose.yml`
+> 실측 결과 `backend-core`는 `:8082`(내부·외부 동일)로 노출된다 — `a2a_adapter/main.py`의
+> `FINALLQ_BASE_URL` 기본값(`http://localhost:8080`)이 실제 배포 포트와 어긋난 상태다. 위 표에는
+> 실제 배포 포트(`:8082`)를 반영했다 — 어댑터 기본값 자체를 고칠지는 FinAllQ 쪽 결정.
+> InsuQ 쪽도 참고: lookup-clause가 실제로 동작하는 곳은 `INSUQ_SPRING`(:8081, 여전히 501)이
+> 아니라 `INSUQ_ADAPTER`(:9102)다 — 그리고 이 `INSUQ_ADAPTER`는 이제 이 문서가 그리는
+> "A2A_Q 프로토타입"이 아니라 **InsuQ 자기 레포 안으로 포크된 사본**이다(`InsuQ/a2a_adapter/`,
+> import 경로가 `adapters.insuq_a2a.*` → `a2a_adapter.*`로 바뀜). InsuQ 쪽 주석에 남은 이력에
+> 따르면 `verify-collateral-insurance`·`claim-insurance`는 한때 이 사본에도 있었으나 Spring
+> backend가 실제 Policy 테이블로 그 둘을 구현하면서 계약 중복을 막기 위해 이 사본에서는
+> 제거하고 정책 대장이 필요 없는 `lookup-clause`만 남겼다 — 즉 위 §5~6이 그리던 "결국 각
+> 레포로 이관"이 InsuQ 쪽은 스킬별로 이미 반쯤 일어난 상태다. InsuQ `docs/07_BACKLOG.md` H9는
+> 이 포크와 원본(A2A_Q `adapters/insuq_a2a/`)이 같은 Agent Card를 중복 선언하는 정리 필요
+> 항목으로 남아 있다.
 
 ---
 
@@ -411,9 +433,15 @@ graph TD
 > MaintQ는 아직 진행 중인 프로젝트라 여기서는 요약만 남긴다. 상세는 `A2A_DIAGRAMS.md` §⑦ 참고.
 
 - **역할:** 스킬을 노출하지 않는 항상 client. 발주 승인·처분·수리 이벤트가 트리거가 되어 FinAllQ/InsuQ로 요청을 보낸다.
-- **실제로 끝단까지 연결되어 동작 확인된 것:** `lookup-clause`(InsuQ), `request-withdrawal`(FinAllQ), `assess-loan`(FinAllQ→InsuQ 2차 홉) — 3개 스킬 모두 실 어댑터 상대 E2E 성공(200) 확인.
+- **실제로 끝단까지 연결되어 동작 확인된 것:** `request-withdrawal`(FinAllQ), `assess-loan`(FinAllQ→InsuQ 2차 홉) — 실 어댑터 상대 E2E 성공(200) 확인. `lookup-clause`(InsuQ)도 이제 여기 속한다 — 아래 참고.
 - **계약만 정의되고 발신 코드가 아직 없는 것:** `advise-hedge`(S6)·`request-settlement`(S12)·`assess-used-equipment-loan`(S13)·`advise-financing`(S16)·`notify-asset-change`(S11)·`notify-risk-change`(S14)·`claim-insurance`(S15) — FinAllQ/InsuQ 쪽 수신부는 준비되어 있으나 MaintQ 쪽 트리거(payload 빌더 + 라우터)가 없다.
-- **막힌 것 1건:** `lookup-clause`는 코드는 동작하지만 MaintQ 쪽 서비스 자격증명이 아직 설정되지 않아 실행 시 차단된다(사람이 처리할 운영 항목이지 코드 문제 아님).
+- **`lookup-clause` — 정정(2026-08-24).** 이 절은 원래 "코드는 동작하지만 MaintQ 쪽 서비스
+  자격증명이 아직 설정되지 않아 차단된다"고 적혀 있었다. 실측 결과 그 서술은 틀렸다 — 막힌
+  진짜 원인은 MaintQ가 아니라 **InsuQ가 스킬 자체를 미구현**(501 고정)이었던 것이고, 그마저도
+  이제 해소돼 InsuQ `:9102` 어댑터(위 §6 참고)를 통해 실제로 응답한다. 단 두 가지는 아직 남아
+  있다 — ① 이 어댑터엔 인증 헤더 검증 자체가 없어 D120 스킴이 실전 검증되지 않았고, ② InsuQ의
+  "정식" 수신부로 설계됐던 Spring `:8081`은 여전히 501이라 이 어댑터가 임시인지 최종인지는
+  InsuQ 쪽 결정이 필요하다(H9).
 
 ---
 

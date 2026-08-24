@@ -169,7 +169,7 @@ flowchart TD
     style LOOP fill:#e8f4ff
 ```
 
-> `mcp_server` 프로세스는 파트너 자격증명을 직접 들고 있지 않고, 인증은 `backend/a2a/auth_header.py::build_auth_header()`가 담당합니다(D15/D93 설계 원칙).
+> `mcp_server` 프로세스는 파트너 자격증명을 직접 들고 있지 않고, 인증은 `backend/a2a/auth_header.py::build_auth_header()`가 담당합니다(D15/D93 설계 원칙 — 단 **스킴 자체는 2026-08-24에 D120으로 Basic에서 Bearer+`X-A2A-Partner-Id`로 교체**됐습니다. InsuQ·FinAllQ 실 인증 필터와 대조한 결과였습니다).
 
 ### 2.2 AI 노드 흐름도 — Agent Loop 제어 흐름
 

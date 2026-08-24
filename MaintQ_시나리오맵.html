@@ -191,7 +191,7 @@
       <p class="eyebrow">Q 시리즈 · MaintQ 전용 지도</p>
       <h1>MaintQ 시나리오 & 구현 현황 지도</h1>
       <p class="lede">제조 설비보전 파트 <b>MaintQ</b>의 독립 단독 페이지입니다.
-      <br>공장 정비사가 진단부터 부품 발주, 설비 매각·취득 실사(S9·S10·S18), 수리 증빙(S29), 기한·위험 감시(F5·F6)까지 하나의 대화로 잇는 B2B 제조 보전 에이전트입니다. MVP(M1~M4) 및 Sprint 5~15를 완주하여 <b>도구 18종 · UI 라우트 18개 · 지원 기종 3종(iG5A·S100·IE5) · 회귀 1,097단언</b>이 구축되었습니다. 세 프로젝트 중 유일하게 회차 반복 실측 지표를 관리합니다.</p>
+      <br>공장 정비사가 진단부터 부품 발주, 설비 매각·취득 실사(S9·S10·S18), 수리 증빙(S29), 기한·위험 감시(F5·F6)까지 하나의 대화로 잇는 B2B 제조 보전 에이전트입니다. MVP(M1~M4) 및 Sprint 5~18을 완주하여 <b>도구 20종 · UI 라우트 22개 · 지원 기종 3종(iG5A·S100·IE5) · 설계 결정 D1~D121</b>이 구축되었습니다(상세 회귀 단언 수는 ② 참고). 세 프로젝트 중 유일하게 회차 반복 실측 지표를 관리합니다.</p>
     </div>
     <div class="asof">기준 시점<b>2026-08-24</b><span style="display:block;font-size:11px;margin-top:3px">MVP + Sprint 5~18 완주 반영</span></div>
   </header>
@@ -370,10 +370,10 @@
     <div class="statgrid">
       <div class="statbox"><b>18</b><span>완료 스프린트 <span style="font-size:10px">(M1~M4 + S5~18)</span></span></div>
       <div class="statbox"><b>20</b><span>MCP 도구 <span style="font-size:10px">(코어 7 · 확장 13)</span></span></div>
-      <div class="statbox"><b>21</b><span>UI 라우트 <span style="font-size:10px">(Next.js build 실측)</span></span></div>
+      <div class="statbox"><b>22</b><span>UI 라우트 <span style="font-size:10px">(Next.js build 실측)</span></span></div>
       <div class="statbox"><b>3</b><span>지원 기종 <span style="font-size:10px">(iG5A·S100·IE5, D109)</span></span></div>
-      <div class="statbox"><b>1,279</b><span>회귀 단언 <span style="font-size:10px">(33스위트 1,069 + seed 41 + pytest 169, 실측 2026-08-24)</span></span></div>
-      <div class="statbox"><b>119</b><span>설계 결정 D1~D119</span></div>
+      <div class="statbox"><b>1,285†</b><span>회귀 단언 <span style="font-size:10px">(33스위트 1,075 + seed 41 + pytest 169, 스위트·seed는 2026-08-24 재실측, † pytest 169는 미재확인 이월값)</span></span></div>
+      <div class="statbox"><b>121</b><span>설계 결정 D1~D121</span></div>
       <div class="statbox"><b>24</b><span>DB 테이블 <span style="font-size:10px">(코어 11 + 확장 13)</span></span></div>
       <div class="statbox"><b>8/8</b><span>법령 조문 실수집 <span style="font-size:10px">(8,197자)</span></span></div>
       <div class="statbox"><b>3</b><span>A2A 실통신 완료 <span style="font-size:10px">(S5 출금·약관조회·S13/S8 담보대출)</span></span></div>
@@ -384,7 +384,9 @@
     <div class="connect-note" style="margin-top:10px"><b>🔧 Sprint 16(2026-08-23~24) — 시나리오 진행도 변화 없음, 내부 신뢰성 인프라 갱신.</b> MaintQ가 <b>DB를 SQLite에서 Postgres로 전환</b>했고(D116, Supabase 등 관리형 Postgres 배포 대응), 매뉴얼 검색을 키워드 단독에서 <b>키워드+임베딩(dense) 하이브리드</b>로 확장했습니다(D117, NVIDIA API <code>nvidia/nemotron-3-embed-1b</code>). 이 갱신 과정에서 미포팅 A2A 계약 스파이크 2종이 Postgres 위에서 실제로 깨져 있던 것을 발견·수정했고(격리 미비로 공유 DB에 실제 쓰기 사고가 있었음), 같은 결함으로 미반영 pytest 8파일(46/86 실패)도 함께 고쳤습니다 — <b>위 A2A 실통신 2종의 구현 판정 자체는 바뀌지 않습니다</b>(회귀만 더 견고해짐). 통신 프로토콜·시나리오 번호·진행률 보드는 이 갱신과 무관합니다.</div>
 
     <div class="connect-note" style="margin-top:10px"><b>✅ A2A 3번째 실통신 — S13/S8 담보대출 심사(assess-loan) E2E 성공 (2026-08-24).</b>
-    앞서 막혀 있던 두 지점이 이번에 다 풀렸다: ① MaintQ→FinAllQ payload 필드가 A2A_Q 공식 계약과 어긋나 있던 걸 FinAllQ 쪽이 공식 계약대로 재작성(MaintQ 쪽은 원래 계약을 지키고 있어 무변경) ② FinAllQ→InsuQ 2차 홉(<code>verify-collateral-insurance</code>)이 미구현이었던 것도 해소. 실 응답: <code>{"status":"completed","decision":"approved","collateral_check":{"coverage_amount":300000000.0,"sufficient":true}}</code>. 같은 날 <b>S5 출금 요청(request-withdrawal)에서도 실제 버그 하나를 찾아 고쳤다</b> — <code>po_drafts.error_code</code>가 <code>NULL</code>인 발주(에러코드 진단이 아닌 발주)를 승인하면 payload에 <code>error_code: null</code>이 그대로 실려 FinAllQ가 400으로 거부하던 것을 <code>"" </code>로 고쳤다(수정 전에도 <code>error_code</code>가 있는 정상 케이스는 이미 동작했었다). <b>lookup-clause</b>는 코드·계약 모두 그대로지만 지금은 MaintQ 쪽 서비스 자격증명 미설정으로 런타임에 막혀 있다(코드 문제 아님, 사람이 처리할 항목).</div>
+    앞서 막혀 있던 두 지점이 이번에 다 풀렸다: ① MaintQ→FinAllQ payload 필드가 A2A_Q 공식 계약과 어긋나 있던 걸 FinAllQ 쪽이 공식 계약대로 재작성(MaintQ 쪽은 원래 계약을 지키고 있어 무변경) ② FinAllQ→InsuQ 2차 홉(<code>verify-collateral-insurance</code>)이 미구현이었던 것도 해소. 실 응답: <code>{"status":"completed","decision":"approved","collateral_check":{"coverage_amount":300000000.0,"sufficient":true}}</code>. 같은 날 <b>S5 출금 요청(request-withdrawal)에서도 실제 버그 하나를 찾아 고쳤다</b> — <code>po_drafts.error_code</code>가 <code>NULL</code>인 발주(에러코드 진단이 아닌 발주)를 승인하면 payload에 <code>error_code: null</code>이 그대로 실려 FinAllQ가 400으로 거부하던 것을 <code>"" </code>로 고쳤다(수정 전에도 <code>error_code</code>가 있는 정상 케이스는 이미 동작했었다). <s><b>lookup-clause</b>는 코드·계약 모두 그대로지만 지금은 MaintQ 쪽 서비스 자격증명 미설정으로 런타임에 막혀 있다(코드 문제 아님, 사람이 처리할 항목).</s> <b>정정(2026-08-24, 후속 확인)</b>: 이 판정은 틀렸다 — 막힌 원인은 MaintQ 쪽 자격증명이 아니라 <b>InsuQ가 스킬 자체를 미구현</b>(501 고정)이었던 것이다. 이후 InsuQ 쪽에서 실제 구현이 됐고(단, MaintQ가 D93/D120 인증으로 겨냥하는 정식 Spring 서비스가 아니라 별도 FastAPI 프로토타입 어댑터 :9102에서 동작 — InsuQ 자체 <code>docs/07_BACKLOG.md</code> H9가 이 이원화를 인지 중), MaintQ 기본 타깃이 이미 그 포트라 재검증 가능한 상태다.</div>
+
+    <div class="connect-note" style="margin-top:10px"><b>🔐 A2A 인증 스킴 교체 (2026-08-24, D120) — Basic → Bearer+X-A2A-Partner-Id.</b> MaintQ가 InsuQ·FinAllQ 레포의 실 인증 필터를 직접 열어 대조한 결과, 양쪽 다 D93이 정한 <code>MAINTQ_A2A_&lt;PARTNER&gt;_CLIENT_ID</code>/<code>_SECRET</code> → Basic 스킴이 아니라 <code>Authorization: Bearer &lt;token&gt;</code> + <code>X-A2A-Partner-Id</code> 자기신고 헤더만 검사하고 있었다(FinAllQ→InsuQ 2차 홉이 이미 이 스킴으로 실 성공 중이었음). MaintQ의 <code>credentials.py</code>·<code>auth_header.py</code>를 실제 스킴에 맞춰 재작성 — <code>&lt;PARTNER&gt;_SERVICE_TOKEN</code>(단일값) 읽기 + Bearer 조립. 단, InsuQ의 lookup-clause가 실제로 동작하는 임시 어댑터(:9102, 위 참고)는 인증 헤더 검증 자체가 없어 이 스킴 일치 여부가 아직 실전 검증되지는 않았다.</div>
 
     <div class="connect-note" style="margin-top:10px;border-left-color:var(--st-todo)"><b>🆕 FinAllQ 추가 5스킬 대기 중 (2026-08-24) — MaintQ 발신 트리거 미착수.</b> FinAllQ가 <code>advise-hedge</code>(S6)·<code>advise-financing</code>(S16)·<code>request-settlement</code>(S12)·<code>assess-used-equipment-loan</code>(S13과 별개, 실사용 대출)·<code>advise-replacement-financing</code>(S15, InsuQ <code>claim-insurance</code> 이후 2차 홉 전용) 5종의 계약을 확정하고 자기 쪽 수신 처리를 구현·curl 검증까지 마쳐 공유했다. MaintQ 쪽 발신 트리거(payload 빌더 + 라우터)는 아직 없다 — 이번 시연 범위가 S5·S13/S8 두 개로 확정돼 시연 이후로 미룬 상태다(MaintQ <code>docs/07_BACKLOG.md</code> P34).</div>
 
@@ -402,7 +404,7 @@
         <div class="prog-row"><span class="prog-id done">F5·F6</span><span class="prog-name">기한·사고·위험 감시 계층 (track_deadlines · assess_risk_grade)</span><span class="prog-bar"><i class="done" style="width:100%"></i></span><span class="prog-pct">구현됨 <em>· Sprint 11 완료 (D102)</em></span></div>
         <div class="prog-row"><span class="prog-id prog">S17</span><span class="prog-name">법령 개정 감지 → 사람 확인 후 룰 갱신</span><span class="prog-bar"><i class="done" style="width:70%"></i><i class="todo" style="width:30%"></i></span><span class="prog-pct">수집·대조 O <em>· 도구 노출 v2 제외</em></span></div>
         <div class="prog-row sep"><span class="prog-id done">S5</span><span class="prog-name">출금 요청 — MaintQ→FinAllQ (3단 결재: 팀장→MaintQ 재무부→FinAllQ 재무결재)</span><span class="prog-bar"><i class="done" style="width:100%"></i></span><span class="prog-pct">구현됨 <em>· E2E 실통신 완료, 2026-08-24 발신 시점이 재무부 승인(D119)으로 이동</em></span></div>
-        <div class="prog-row"><span class="prog-id done">A2A</span><span class="prog-name">약관 근거 실시간 질의 — MaintQ→InsuQ (lookup-clause)</span><span class="prog-bar"><i class="done" style="width:100%"></i></span><span class="prog-pct">구현됨 <em>· 코드는 동작, 현재 자격증명 미설정으로 런타임 차단(사람 몫)</em></span></div>
+        <div class="prog-row"><span class="prog-id done">A2A</span><span class="prog-name">약관 근거 실시간 질의 — MaintQ→InsuQ (lookup-clause)</span><span class="prog-bar"><i class="done" style="width:100%"></i></span><span class="prog-pct">구현됨 <em>· InsuQ 임시 어댑터(:9102)에서 실동작, 정식 Spring 서비스(:8081)는 여전히 501</em></span></div>
         <div class="prog-row"><span class="prog-id crit">S7</span><span class="prog-name">화재보험 갱신 — 고장이력 첨부 → InsuQ</span><span class="prog-bar"><i class="done" style="width:30%"></i><i class="todo" style="width:70%"></i></span><span class="prog-pct">이력 데이터 O <em>· 창구 0</em></span></div>
 
         <div class="prog-row"><span class="prog-id todo">S11·S14</span><span class="prog-name">목적물 변경 · 위험등급 변동 통지 → InsuQ</span><span class="prog-bar"><i class="done" style="width:10%"></i><i class="todo" style="width:90%"></i></span><span class="prog-pct">미착수</span></div>
@@ -612,6 +614,8 @@
         <g id="markers"></g>
       </svg>
     </div>
+
+    <div class="connect-note" style="margin-top:14px"><b>✅ 수신측 화면까지 실측 확인 (2026-08-24) — "보낸 요청이 상대편에도 뜨는가".</b> 지금까지는 MaintQ→FinAllQ/InsuQ 발신·응답 왕복만 확인돼 있었는데, 이번에 <b>받는 쪽 화면이 실제로 존재하는지</b>까지 코드로 확인했다. <b>FinAllQ <code>/loan/review</code>(ADMIN)</b>는 진짜 내부 여신 심사역 화면 — S13/S8(assess-loan)이 <code>UNDER_REVIEW</code>로 여기 뜨고 최종 승인은 항상 사람이 한다. <b>InsuQ <code>/pro/inbox</code></b>도 <code>StaffAccess</code>(내부 사용자 JWT)로 게이트된 진짜 내부 심사역 수신함 — A2A 스킬 5종의 요청이 전부 여기 모인다. 반면 <b>FinAllQ <code>/transfers/approvals</code>(MANAGER)</b>는 얼핏 직원 화면 같지만, <code>ApprovalPolicy.decide()</code>가 승인자·요청 소유자의 <code>company_id</code> 일치를 요구해(<code>sameCustomer</code> 검사) 실제로는 <b>MaintQ가 FinAllQ에 등록한 자기 회사 계정</b>이 보는 결재선이다 — S1(출금요청)이 "상대 회사에도 뜬다"는 사실은 맞지만 "상대 회사 직원이 본다"는 아니니 발표·문서에서 구분해서 쓸 것.</div>
   </section>
 
   <!-- ================= ④ 용어 사전 ================= -->
@@ -633,7 +637,7 @@
   <footer>
     <span>Q 시리즈 · MaintQ 시나리오 & 구현 현황 지도</span>
     <span>기준 2026-08-24</span>
-    <span>MVP + Sprint 5~18 완주 — MCP 도구 20 · UI 라우트 21 · 지원 기종 3(iG5A·S100·IE5) · 회귀 단언 1,279 (33스위트 1,069) · 설계 결정 D1~D119 · DB 24테이블</span>
+    <span>MVP + Sprint 5~18 완주 — MCP 도구 20 · UI 라우트 22 · 지원 기종 3(iG5A·S100·IE5) · 회귀 단언 1,285† (33스위트 1,075, † pytest 169는 미재확인 이월값) · 설계 결정 D1~D121 · DB 24테이블</span>
   </footer>
 
 </div>

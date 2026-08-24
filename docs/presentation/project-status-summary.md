@@ -203,6 +203,13 @@ FastAPI (Python) + Next.js + Postgres (Sprint 16, D116 — SQLite에서 전환, 
 ```
 
 > **2026-08-24 갱신 — 위 스택 라인만 최신화.** DB를 Postgres로, 매뉴얼 검색을 키워드+dense 하이브리드로 바꿨습니다(D116·D117). 아래 "핵심 성과"·"진행 상태" 표의 수치는 이 인프라 갱신 이전 값 그대로입니다 — 하이브리드 가중치가 아직 임시값이라 인용률(90.7%)이 곧바로 바뀌는 건 아닙니다. A2A 호출부 상태는 이 표 작성 시점(A2A 호출부 "미착수")보다 실제로 더 진행돼 있습니다(request-withdrawal·lookup-clause·assess-loan 3종 구현 완료) — 이 문서 전체가 A2A 부분은 특히 오래됐다는 뜻이니, 최신 A2A 진행도는 `MaintQ_시나리오맵.html` §②를 참고하세요.
+>
+> **🆕 추가 갱신(2026-08-24, 같은 날 후속)**: 아래 "A2A 신원 구조"·"토큰 캐시(D93)" 행도 이제 D93
+> 그대로가 아니다 — MaintQ가 InsuQ·FinAllQ 실 인증 필터를 직접 대조해 D93의 Basic(client_id/secret)
+> 스킴을 Bearer(`<PARTNER>_SERVICE_TOKEN`)+`X-A2A-Partner-Id`로 교체했다(D120, `credentials.py`·
+> `auth_header.py` 재작성). 그리고 위 노트가 "구현 완료"로 적은 `lookup-clause`는 InsuQ 쪽
+> TASK-H09가 아직 정리 중인 임시 어댑터(:9102, 인증 헤더 검증 없음)에서만 동작 — InsuQ의
+> "정식" 수신부(Spring :8081)는 여전히 501이다. 상세는 `a2a-contract-and-data-flow.md` §5·§7.
 
 ### 진행 상태
 
