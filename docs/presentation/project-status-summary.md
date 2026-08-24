@@ -98,6 +98,54 @@ Python FastAPI + Qdrant (벡터 스토어)
 | **policy_part 검증 강화** | ⏳ 진행 | 괄호 처리 + 유보 강등 (TASK-B07) |
 | **Part 2 골든셋 (20문항)** | ⏳ 대기 | 사람 검수 필요 |
 
+### A2A 스킬 구현 현황 (2026-08-23, Sprint 13 갱신)
+
+| 스킬 | 시나리오 | 상태 |
+|---|---|---|
+| `verify-collateral-insurance` | S8, S13 | ✅ 완료 |
+| `advise-policy-renewal` | S7 | ✅ 완료 |
+| `notify-asset-change` | S11 | ✅ 완료 (Sprint 13) |
+| `notify-risk-change` | S14 | ❌ 미착수 — Sprint 13 계획에서 누락, 다음 스프린트 필수 *(2026-08-24 갱신: Sprint 14에서 구현 완료 — 아래 콜아웃 참고)* |
+| `claim-insurance` | S15 | ✅ 완료 (Sprint 13) — `requires_human_approval:true` 하드 리터럴(우회 불가), 승인 큐 backend까지 E2E 검증(실제 curl 스크립트, mock 없음) |
+
+**Sprint 13 추가 인프라**: 서비스 간 인증(목업+partner_grants 인가) · request_chain_id 감사로그 · Idempotency-Key 공용 인프라(3중 복합키) · Task 생명주기 상태머신(possession 기반 인가) · 수신함 승인/반려 backend API(사용자 JWT, UI는 다음 스프린트). backend 테스트 276→398건, 0 failures, 2회 반복 재현성 확인.
+
+> **2026-08-24 갱신 — 위 A2A 스킬 표·인프라 문단 갱신.** Sprint 13(A2A 트랙7)이 완료돼 main에
+> 병합됐습니다. `notify-asset-change`·`claim-insurance`에 더해 `verify-collateral-insurance`·
+> `advise-policy-renewal`도 이 갱신 시점 기준 완료 상태입니다(5개 스킬 중 4개). 인증(ServiceTokenFilter,
+> partner_grants 인가)·request_chain_id 감사로그·Idempotency-Key 공용 인프라(3중 복합키)·A2A Task
+> 생명주기 상태머신(possession 기반 인가)·수신함 승인/반려 backend API가 모두 이 병합에 포함됐습니다
+> (수신함 UI는 여전히 TASK-H04b로 남아 있음).
+>
+> `notify-risk-change`(S14, TASK-H14)는 위 표의 "미착수"가 이제 더는 맞지 않습니다 — 2026-08-24 Sprint 14로
+> 계획이 확정됐고(결정론적 판정 공식: `margin = threshold(0.2) - ratio`, `|margin|<=0.1`이면
+> `deferred`+`needs_review=true`, 그 밖은 방향에 따라 `notify_required`/`not_required`), **구현이
+> 완료됐습니다**. Dev→Tester→Reviewer 게이트 전부 PASS(backend 테스트 423→448건, 0 failures)하고
+> `feat/notify-risk-change`가 `main`에 병합됐습니다(커밋 `687d616`). 재빌드된 Docker 컨테이너를
+> 상대로 FinAllQ의 실제 A2A 호출 패턴(헤더·Idempotency-Key)과 동일하게 curl로 6개 경로(정상 판정·
+> 경계·Idempotency 재생/충돌/누락·미매핑 계약)를 실측 검증했습니다. "계획 완료, 구현 완료"입니다.
+> A2A 트랙7 5개 스킬 전부 구현 완료됐고, 남은 것은 `lookup-clause`(TASK-H09) 정리뿐입니다.
+>
+> 트랙7 범위 밖의 신규 기능도 main에 병합됐습니다: 설계사가 고객 상세 페이지에서 자유질문하면
+> `classify_domain_llm()`이 그 고객이 실제 가입한 도메인(실손/화재) 1~2개로 후보를 좁혀 LLM으로
+> 판별하고, ambiguous면 두 도메인 각각 검색 후 `more_conservative()`로 병합해 근거에 `domain`을
+> 태깅합니다. `customerId`가 있으면 서버가 후보 도메인을 재계산해 클라이언트 값을 무시하는데, 이
+> 재계산을 우회할 수 있던 `/qa/stream`의 보안 갭을 UI가 붙기 전에 선제 발견·차단했습니다. 두 브랜치
+> (A2A·도메인분류)가 독립적으로 같은 공유 DTO(`AiQaRequest`·`Evidence`)에 필드를 추가해 병합 직후
+> 컴파일 에러 4곳이 났고, 수정 완료했습니다.
+>
+> `verify-collateral-insurance`의 `effective_recovery` 필드(지금까지 항상 `null`)를, `claim-insurance`가
+> 이미 쓰던 비례보상 공식(손해액 × coverage_amount / (insured_value × coinsurance_ratio))을 재사용해
+> 산정하도록 구현했고, `docs/A2A_API_SPEC.md`의 단순화된 공식 표기(coinsurance_ratio 누락)도
+> 정정했습니다. 인덱서의 `recreate: false` 증분 인덱싱 검증 로직 버그(완전일치 비교 → 부분집합 비교로
+> 수정)도 이 시점에 발견·수정했고, 트랙4(화재보험)에 주택화재보험·성공예감·비즈앤안전파트너·
+> 아파트안심보험 4개 상품을 기존 컬렉션에 증분 인덱싱해 Qdrant Cloud `insuq_track4` 컬렉션이
+> 2,214 → 6,505 포인트가 됐습니다.
+>
+> 위 "backend 테스트 276→398건"도 이후 더 늘었습니다 — 2026-08-24 기준 backend 423건(+25) ·
+> ai-engine 904건(+29) · frontend vitest 114건(+37), 전부 0 failures. 최신 상태는 InsuQ 레포의
+> `docs/status_audit.html`·`docs/status.html`을 참고하세요(main 최신 커밋 `af22794`).
+
 ### 다음 단계
 
 **우선순위:**
@@ -111,11 +159,12 @@ Python FastAPI + Qdrant (벡터 스토어)
    - 난이도 분류
    - 일정: 3주
 
-3. **A2A 스킬 호출**
-   - `verify-collateral-insurance` (담보 검증)
-   - `advise-policy-renewal` (갱신 상담)
-   - `notify-asset-change` (목적물 변경)
-   - `claim-insurance` (보험금 청구)
+3. **A2A `notify-risk-change` 구현** *(2026-08-24 갱신: 완료)*
+   - Sprint 14에서 구현 완료, main 병합(커밋 687d616) — 5개 스킬 전부 완료
+   - 남은 A2A 항목은 `lookup-clause`(TASK-H09) 정리뿐
+
+4. **A2A 수신함 UI (H04b)**
+   - backend API는 완료, 프론트 화면만 남음
 
 ### 블로커/리스크
 
@@ -142,15 +191,18 @@ Python FastAPI + Qdrant (벡터 스토어)
 ### 기술 스택
 
 ```
-FastAPI (Python) + Next.js + SQLite (목업)
+FastAPI (Python) + Next.js + Postgres (Sprint 16, D116 — SQLite에서 전환, 2026-08-24)
 ├─ LLM: Gemini 2.5 Flash
-├─ 검색: 키워드 기반 (IDF, 1035청크, 567k자)
+├─ 검색: 키워드(IDF) + dense 임베딩 하이브리드 (D117, 2026-08-24 — NVIDIA API
+│   nvidia/nemotron-3-embed-1b, 1229청크로 증가·IE5 기종 포함)
 ├─ 도구: MCP (7코어 + 11확장)
 │   └─ 쓰기 도구 격리 (draft INSERT만, UPDATE 불가)
 ├─ 스트림: SSE (token, tool_call, tool_result, block)
 ├─ 추적: traces 원문 보존 (환각 방지)
 └─ 격리: MCP 서버 별도 프로세스 (ERP 교체 용이)
 ```
+
+> **2026-08-24 갱신 — 위 스택 라인만 최신화.** DB를 Postgres로, 매뉴얼 검색을 키워드+dense 하이브리드로 바꿨습니다(D116·D117). 아래 "핵심 성과"·"진행 상태" 표의 수치는 이 인프라 갱신 이전 값 그대로입니다 — 하이브리드 가중치가 아직 임시값이라 인용률(90.7%)이 곧바로 바뀌는 건 아닙니다. A2A 호출부 상태는 이 표 작성 시점(A2A 호출부 "미착수")보다 실제로 더 진행돼 있습니다(request-withdrawal·lookup-clause·assess-loan 3종 구현 완료) — 이 문서 전체가 A2A 부분은 특히 오래됐다는 뜻이니, 최신 A2A 진행도는 `MaintQ_시나리오맵.html` §②를 참고하세요.
 
 ### 진행 상태
 

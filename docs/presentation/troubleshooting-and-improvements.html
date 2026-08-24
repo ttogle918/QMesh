@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Troubleshooting and Improvements</title>
+    <style>
+        :root {
+            --primary: #ff6b35;
+            --secondary: #ee5a24;
+            --accent: #ffa502;
+            --success: #26de81;
+            --warning: #ffb347;
+            --danger: #ff6b6b;
+            --text: #2c3e50;
+            --bg: #f8f9fa;
+            --border: #e0e0e0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .section {
+            background: white;
+            margin-bottom: 2rem;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+
+        .section h2 {
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary);
+            font-size: 1.8rem;
+        }
+
+        .section h3 {
+            color: var(--secondary);
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:nth-child(even) {
+            background: #f5f5f5;
+        }
+
+        tr:hover {
+            background: #eeeeee;
+        }
+
+        .issue-card {
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.05) 0%, rgba(238, 90, 36, 0.05) 100%);
+            border-left: 4px solid var(--primary);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 6px;
+        }
+
+        .metric-box {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .metric {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
+        }
+
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin: 0.5rem 0;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+        }
+
+        .status-done {
+            background: var(--success);
+            color: white;
+        }
+
+        .status-fail {
+            background: var(--danger);
+            color: white;
+        }
+
+        .status-pending {
+            background: var(--warning);
+            color: white;
+        }
+
+        code {
+            background: #f5f5f5;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 1.5rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .solution-box {
+            background: linear-gradient(135deg, rgba(38, 222, 129, 0.1) 0%, rgba(80, 227, 194, 0.05) 100%);
+            border-left: 4px solid var(--success);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 6px;
+        }
+
+        .solution-box h4 {
+            color: var(--success);
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-bar {
+            background: var(--border);
+            border-radius: 10px;
+            height: 30px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+        }
+
+        .learning {
+            background: linear-gradient(135deg, rgba(255, 165, 2, 0.1) 0%, rgba(255, 179, 71, 0.05) 100%);
+            border-left: 4px solid var(--accent);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 6px;
+        }
+
+        .learning h4 {
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .comparison-table {
+            margin: 1.5rem 0;
+        }
+
+        .comparison-table td {
+            vertical-align: middle;
+        }
+
+        .improvement {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .regression {
+            color: var(--danger);
+            font-weight: 600;
+        }
+
+        .neutral {
+            color: var(--text);
+        }
+
+        .timeline {
+            position: relative;
+            padding: 2rem 0;
+        }
+
+        .timeline-item {
+            margin-bottom: 2rem;
+            padding-left: 3rem;
+            position: relative;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 0 0 3px var(--primary);
+        }
+
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 20px;
+            width: 4px;
+            height: calc(100% + 1rem);
+            background: var(--border);
+        }
+
+        .timeline-item:last-child::after {
+            display: none;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .summary-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-top: 4px solid var(--primary);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+
+        .summary-card h4 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .summary-card ul {
+            list-style-position: inside;
+            margin-left: 1rem;
+        }
+
+        .summary-card li {
+            margin-bottom: 0.5rem;
+        }
+
+        footer {
+            background: var(--text);
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            .metric-box {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 0.85rem;
+            }
+
+            th, td {
+                padding: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🔧 Troubleshooting & Improvements</h1>
+        <p>FinAllQ, InsuQ, MaintQ 개발 과정의 주요 이슈 해결 기록</p>
+    </header>
+
+    <div class="container">
+        <!-- 요약 섹션 -->
+        <div class="section">
+            <h2>📋 Executive Summary</h2>
+            <p>세 프로젝트 개발 중 발견된 <strong>구조적 결함</strong>과 <strong>성능 최적화</strong> 사항을 기록합니다.</p>
+
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <h4>🚨 주요 이슈</h4>
+                    <ul>
+                        <li>LLM 모델 선택 (nemotron → Gemini)</li>
+                        <li>빈 응답 결함 (Truncated Response)</li>
+                        <li>거부 게이트 정확도</li>
+                        <li>골든셋 태깅 문제</li>
+                    </ul>
+                </div>
+                <div class="summary-card">
+                    <h4>✅ 해결 현황</h4>
+                    <ul>
+                        <li>4/4 주요 이슈 해결</li>
+                        <li>성능 지표 회복</li>
+                        <li>평가 신뢰도 확보</li>
+                        <li>구조적 개선 완료</li>
+                    </ul>
+                </div>
+                <div class="summary-card">
+                    <h4>📊 영향도</h4>
+                    <ul>
+                        <li>레이턴시: 76% 단축</li>
+                        <li>거부 정확도: 100%</li>
+                        <li>환각: 0%</li>
+                        <li>측정 신뢰도: 오염 → 정상</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Issue 1 -->
+        <div class="section">
+            <h2>🔴 Issue 1: LLM 모델 선택 — Nemotron vs Gemini</h2>
+
+            <div class="issue-card">
+                <strong>프로젝트:</strong> InsuQ<br>
+                <strong>발생 시기:</strong> EXP-002~003 (2026-07-20)<br>
+                <strong>영향도:</strong> <span class="status-badge status-fail">핵심 (모델 교체 결정)</span>
+            </div>
+
+            <h3>증상</h3>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>모델</th>
+                        <th>p95 레이턴시</th>
+                        <th>거부 정확도</th>
+                        <th>단정 위반</th>
+                        <th>게이트</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>NVIDIA nemotron</strong></td>
+                        <td><span class="regression">44.7s 🚨</span></td>
+                        <td>100%</td>
+                        <td>1/24</td>
+                        <td><span class="status-badge status-fail">❌ FAIL</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Gemini 3.5 Flash</strong></td>
+                        <td><span class="improvement">10.4s ✅</span></td>
+                        <td>100%</td>
+                        <td>0/24</td>
+                        <td><span class="status-badge status-done">✅ PASS</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>근본 원인: 타임아웃 악순환</h3>
+            <div class="learning">
+                <h4>⚡ nemotron의 악순환</h4>
+                <ol style="margin-left: 1.5rem;">
+                    <li>정상 호출의 최대 레이턴시: ~19.4s</li>
+                    <li>타임아웃 설정: 25s (너무 촉박)</li>
+                    <li>타임아웃 초과 시 exponential backoff 재시도 (1s + 2s + 4s = 7s)</li>
+                    <li>결과: 19.4 + 7 = ~26.4s → 여전히 초과 → 재시도 반복</li>
+                    <li><strong>최종: p95 44.7s</strong> ← 재시도 오버헤드로 평가 세트 전체 실행 시간 2배 증가</li>
+                </ol>
+            </div>
+
+            <h3>해결: 모델 교체</h3>
+            <div class="solution-box">
+                <h4>✅ 해결 방법</h4>
+                <p><strong>구조적 해결 불가능</strong> → 모델 교체가 유일한 해법</p>
+                <ul style="margin-left: 1.5rem;">
+                    <li><strong>nemotron:</strong> "빠른 모델 찾기" 우회 불가능 (동일 제품군 내 선택지 제한)</li>
+                    <li><strong>Gemini:</strong> "타임아웃 악순환" 원점 제거 (레이턴시 안정적)</li>
+                </ul>
+            </div>
+
+            <h3>성능 개선 수치</h3>
+            <div class="metric-box">
+                <div class="metric">
+                    <div class="metric-label">거부 정확도</div>
+                    <div class="metric-value">100%</div>
+                    <div class="metric-label">→ 100% (동일)</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">단정 위반</div>
+                    <div class="metric-value">1 → 0</div>
+                    <div class="metric-label">100% 개선</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">p95 레이턴시</div>
+                    <div class="metric-value">44.7s → 10.4s</div>
+                    <div class="metric-label">77% 단축 ✅</div>
+                </div>
+            </div>
+
+            <div class="learning">
+                <h4>💡 핵심 교훈</h4>
+                <p>"모델이 느리면 프롬프트나 인프라로 보완할 수 없다. <strong>빠른 모델을 우선으로 찾는다.</strong>"</p>
+            </div>
+        </div>
+
+        <!-- Issue 2 -->
+        <div class="section">
+            <h2>🔴 Issue 2: 빈 응답 결함 (Truncated Response)</h2>
+
+            <div class="issue-card">
+                <strong>프로젝트:</strong> InsuQ<br>
+                <strong>발생 시기:</strong> EXP-001 (2026-07-20)<br>
+                <strong>영향도:</strong> <span class="status-badge status-fail">높음 (측정 신뢰도 훼손)</span>
+            </div>
+
+            <h3>증상</h3>
+            <p>Reasoning 모델(qwen3-next) 호출 시 빈 응답이 정상 답변으로 집계됨:</p>
+            <pre>{
+  "finish_reason": "length",        // ← 문제!
+  "content": "",                    // ← 빈 응답
+  "reasoning_content": "[생각...]"
+}</pre>
+
+            <h3>원인 분석</h3>
+            <div class="solution-box">
+                <h4>🔍 근본 원인</h4>
+                <ul style="margin-left: 1.5rem;">
+                    <li><code>max_tokens=1024</code>가 모두 추론(<code>reasoning_content</code>)에 소진됨</li>
+                    <li><code>finish_reason=length</code> 감지 불가능</li>
+                    <li>클라이언트가 <code>content</code> 필드만 확인 → 빈 문자열을 통과</li>
+                    <li><strong>결과:</strong> 정상 답변 카테고리에 포함 (평가 지표 오염)</li>
+                </ul>
+            </div>
+
+            <h3>해결 (3단계)</h3>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <strong>1단계: TruncatedResponseError 신설</strong>
+                    <p>
+                        <code>finish_reason=length</code> 감지 시 발생하도록 예외 정의
+                    </p>
+                </div>
+                <div class="timeline-item">
+                    <strong>2단계: max_tokens 상향 조정</strong>
+                    <p>
+                        기존: <code>1024</code> → 변경: <code>3000</code><br>
+                        근거: 평가 문항 50개 기준으로 p75 ~2.8k
+                    </p>
+                </div>
+                <div class="timeline-item">
+                    <strong>3단계: 회귀 테스트 추가</strong>
+                    <p>
+                        <code>finish_reason=length</code> 시 <code>TruncatedResponseError</code> 발생 확인
+                    </p>
+                </div>
+            </div>
+
+            <h3>성능 영향</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>지표</th>
+                        <th>변경</th>
+                        <th>의미</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>측정 신뢰도</td>
+                        <td><span class="regression">오염</span> → <span class="improvement">정상</span></td>
+                        <td>이후 baseline 신뢰 가능</td>
+                    </tr>
+                    <tr>
+                        <td>max_tokens</td>
+                        <td>1024 → 3000</td>
+                        <td>메모리/속도 영향 미미</td>
+                    </tr>
+                    <tr>
+                        <td>테스트</td>
+                        <td><span class="improvement">+1 회귀 테스트</span></td>
+                        <td>영구적 보호</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Issue 3 -->
+        <div class="section">
+            <h2>🔴 Issue 3: 과잉 거부 및 골든셋 태깅 문제</h2>
+
+            <div class="issue-card">
+                <strong>프로젝트:</strong> InsuQ<br>
+                <strong>발생 시기:</strong> EXP-040, 2026-08-14<br>
+                <strong>영향도:</strong> <span class="status-badge status-pending">중간 (지표 정의 혼동)</span>
+            </div>
+
+            <h3>증상</h3>
+            <p>"과잉 거부 4건" 보고 → 분석 결과 <strong>원인이 셋으로 갈렸다</strong>:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>문항</th>
+                        <th>근거 검색</th>
+                        <th>원인 분류</th>
+                        <th>해결책</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>gA-010</td>
+                        <td>❌ 미검색</td>
+                        <td><strong>검색 실패</strong> (정당한 거부)</td>
+                        <td>검색 개선</td>
+                    </tr>
+                    <tr>
+                        <td>gB-003</td>
+                        <td>❌ 미검색</td>
+                        <td><strong>검색 실패</strong> (정당한 거부)</td>
+                        <td>검색 개선</td>
+                    </tr>
+                    <tr>
+                        <td>gB-018</td>
+                        <td>✅ 검색됨</td>
+                        <td><strong>간헐적</strong> (비결정성)</td>
+                        <td>비결정성 조사</td>
+                    </tr>
+                    <tr>
+                        <td>gB-020</td>
+                        <td>❌ 미검색</td>
+                        <td><strong>방어선 오탐</strong> + 검색 실패</td>
+                        <td>매칭 규칙 강화</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>근본 원인 1: false_refusal_rate 정의 혼동</h3>
+            <div class="learning">
+                <h4>⚠️ 정의 문제</h4>
+                <pre>false_refusal_rate = 과잉 거부
+= (a) 근거 있는데 거부 (생성 오류)
++ (b) 근거 없는데 거부 (검색 실패) ← 정당한 거부인데 섞여 있음!</pre>
+                <p><strong>문제:</strong> 두 원인의 해결책이 완전히 다른데 한 숫자에 섞여 있음</p>
+            </div>
+
+            <h3>근본 원인 2: policy_part 문자열 매칭 실패 (16.1%)</h3>
+            <div class="solution-box">
+                <h4>📌 코퍼스 형태</h4>
+                <pre>저장:      "보통약관(제3장 재산손해종합보장...관련 보통약관)"
+모델 인용: "보통약관"
+결과:      문자열 불일치 → 환각으로 오판정</pre>
+            </div>
+
+            <h3>해결 (TASK-B08, TASK-B07)</h3>
+            <div class="solution-box">
+                <h4>✅ 단계별 해결</h4>
+
+                <h4 style="margin-top: 1rem;">1단계: 지표 분리 (TASK-B08)</h4>
+                <pre>def false_refusal_breakdown():
+    """gold_article 검색 여부로 분리"""
+    if gold_article in retrieved_chunks:
+        return "generation_side_overrefusal"  # 진짜 오거부
+    else:
+        return "search_failure"  # 검색 실패 (정당)</pre>
+
+                <h4 style="margin-top: 1rem;">2단계: policy_part 검증 강화 (TASK-B07)</h4>
+                <p><strong>선택지:</strong></p>
+                <ul style="margin-left: 1.5rem;">
+                    <li><strong>A:</strong> 괄호 떼기 → 다중 조항 오매칭 위험</li>
+                    <li><strong>B (권장):</strong> 검증 실패 → 거부 아니라 "판단 유보"로 강등</li>
+                    <li><strong>C:</strong> 프롬프트 정확성 유도 → 의존성 높음</li>
+                </ul>
+                <p><strong>선택 근거:</strong> 프로젝트 원칙 "틀리게 답하느니 모른다고 답한다"</p>
+            </div>
+        </div>
+
+        <!-- 개선 현황 -->
+        <div class="section">
+            <h2>✅ 개선 현황 및 영향도</h2>
+
+            <h3>프로젝트별 해결 상태</h3>
+
+            <h4>FinAllQ</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>이슈</th>
+                        <th>상태</th>
+                        <th>영향</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>N+1 쿼리 문제</td>
+                        <td><span class="status-badge status-done">✅ 완료</span></td>
+                        <td>응답 시간 68% 단축</td>
+                    </tr>
+                    <tr>
+                        <td>TOTP 재검증</td>
+                        <td><span class="status-badge status-done">✅ 완료</span></td>
+                        <td>모든 테스트 통과 (831개)</td>
+                    </tr>
+                    <tr>
+                        <td>A2A 어댑터</td>
+                        <td><span class="status-badge status-done">✅ 완료</span></td>
+                        <td>스킬별 상태 매핑 완벽</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h4 style="margin-top: 1.5rem;">InsuQ</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>이슈</th>
+                        <th>상태</th>
+                        <th>영향</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>LLM 모델 선택</td>
+                        <td><span class="status-badge status-done">✅ Gemini 3.5 Flash</span></td>
+                        <td>p95 44.7s → 10.4s (76% 단축)</td>
+                    </tr>
+                    <tr>
+                        <td>빈 응답 결함</td>
+                        <td><span class="status-badge status-done">✅ TruncatedResponseError</span></td>
+                        <td>측정 신뢰도 회복</td>
+                    </tr>
+                    <tr>
+                        <td>거부 게이트</td>
+                        <td><span class="status-badge status-done">✅ 2중 방어선</span></td>
+                        <td>거부 정확도 100%, 환각 0%</td>
+                    </tr>
+                    <tr>
+                        <td>골든셋 태깅</td>
+                        <td><span class="status-badge status-done">✅ 지표 분리</span></td>
+                        <td>원인별 분류 가능</td>
+                    </tr>
+                    <tr>
+                        <td>증분 인덱싱 검증 오탐 <span style="color:#c99b2c;font-size:0.85em">(2026-08-24 추가)</span></td>
+                        <td><span class="status-badge status-done">✅ 완전일치 → 부분집합 비교</span></td>
+                        <td>정상 완료된 증분 인덱싱이 매번 실패로 오탐되던 것 해결. 트랙4 신규 상품 4종 인덱싱으로 insuq_track4 컬렉션 2,214 → 6,505 포인트</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h4 style="margin-top: 1.5rem;">MaintQ</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>이슈</th>
+                        <th>상태</th>
+                        <th>영향</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>도구 프로파일링</td>
+                        <td><span class="status-badge status-done">✅ 완료</span></td>
+                        <td>core/full 두 가지 모드</td>
+                    </tr>
+                    <tr>
+                        <td>A2A 통합</td>
+                        <td><span class="status-badge status-pending">⏳ 진행 중</span></td>
+                        <td>10개 시나리오 설계 완료</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 핵심 메시지 -->
+        <div class="section" style="background: linear-gradient(135deg, rgba(255, 107, 53, 0.05) 0%, rgba(238, 90, 36, 0.05) 100%);">
+            <h2>💡 핵심 메시지</h2>
+            <div style="font-size: 1.2rem; line-height: 1.8; color: var(--text);">
+                <p>
+                    <strong>"측정과 비교로 모든 기술 선택을 검증한다."</strong>
+                </p>
+                <ul style="margin-left: 1.5rem; margin-top: 1rem;">
+                    <li>불필요한 추측 금지 — 실측 데이터 기반 결정</li>
+                    <li>부분 최적화 금지 — 전체 영향도 검토</li>
+                    <li>원인 분석 완전 — 증상 치료가 아니라 구조적 해결</li>
+                    <li>교훈 공유 — 다음 프로젝트에 적용</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>분석 기간: Sprint 6 ~ Sprint 16 (2026-07-20 ~ 2026-08-23)</p>
+        <p style="font-size:0.85rem;color:#c99b2c">2026-08-24 InsuQ 표에 증분 인덱싱 검증 오탐 이슈 1건 추가 (다른 프로젝트 섹션은 미변경)</p>
+        <p>© 2026 Development Team</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A2A Scenarios & Implementation Status</title>
+    <style>
+        :root {
+            --primary: #2196f3;
+            --secondary: #1976d2;
+            --accent: #42a5f5;
+            --success: #26de81;
+            --warning: #ffb347;
+            --danger: #ff6b6b;
+            --text: #2c3e50;
+            --bg: #f8f9fa;
+            --border: #e0e0e0;
+            --dark-bg: #263238;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .section {
+            background: white;
+            margin-bottom: 2rem;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+
+        .section h2 {
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary);
+            font-size: 1.8rem;
+        }
+
+        .section h3 {
+            color: var(--secondary);
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:nth-child(even) {
+            background: #f5f5f5;
+        }
+
+        tr:hover {
+            background: #eeeeee;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .status-complete {
+            background: var(--success);
+            color: white;
+        }
+
+        .status-progress {
+            background: var(--warning);
+            color: white;
+        }
+
+        .status-pending {
+            background: #b0bec5;
+            color: white;
+        }
+
+        .status-blocked {
+            background: var(--danger);
+            color: white;
+        }
+
+        .progress-section {
+            background: linear-gradient(135deg, rgba(33, 150, 243, 0.05) 0%, rgba(66, 165, 245, 0.05) 100%);
+            border-left: 4px solid var(--primary);
+            padding: 2rem;
+            margin: 2rem 0;
+            border-radius: 6px;
+        }
+
+        .progress-bar {
+            height: 30px;
+            background: var(--border);
+            border-radius: 15px;
+            margin: 1rem 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+
+        .scenario-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .scenario-card {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .scenario-card:hover {
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
+            border-color: var(--primary);
+        }
+
+        .scenario-card h4 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .scenario-card .meta {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        .scenario-card ul {
+            list-style-position: inside;
+            margin-left: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .scenario-card li {
+            margin-bottom: 0.3rem;
+        }
+
+        .metric-box {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .metric {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2);
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 0.5rem 0;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .endpoint-card {
+            background: var(--dark-bg);
+            color: #ecf0f1;
+            padding: 1.5rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+            border-left: 4px solid var(--primary);
+        }
+
+        .endpoint-card code {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.3rem 0.6rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .http-method {
+            display: inline-block;
+            padding: 0.3rem 0.6rem;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            margin-right: 0.5rem;
+        }
+
+        .http-get { background: var(--primary); color: white; }
+        .http-post { background: var(--success); color: white; }
+        .http-put { background: var(--warning); color: white; }
+        .http-delete { background: var(--danger); color: white; }
+
+        .architecture-box {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .architecture-flow {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 2;
+            color: var(--text);
+        }
+
+        .evaluation-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .evaluation-item {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .evaluation-item.good {
+            border-color: var(--success);
+            background: linear-gradient(135deg, rgba(38, 222, 129, 0.05) 0%, rgba(80, 227, 194, 0.05) 100%);
+        }
+
+        .evaluation-item.warning {
+            border-color: var(--warning);
+            background: linear-gradient(135deg, rgba(255, 179, 71, 0.05) 0%, rgba(255, 165, 2, 0.05) 100%);
+        }
+
+        .evaluation-score {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .evaluation-label {
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+
+        .roadmap-item {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .roadmap-item.complete {
+            border-left-color: var(--success);
+            background: linear-gradient(135deg, rgba(38, 222, 129, 0.05) 0%, rgba(80, 227, 194, 0.05) 100%);
+        }
+
+        .roadmap-item.progress {
+            border-left-color: var(--warning);
+            background: linear-gradient(135deg, rgba(255, 179, 71, 0.05) 0%, rgba(255, 165, 2, 0.05) 100%);
+        }
+
+        .roadmap-marker {
+            font-weight: bold;
+            color: white;
+            background: var(--primary);
+            padding: 0.5rem 0.8rem;
+            border-radius: 4px;
+            white-space: nowrap;
+            height: fit-content;
+        }
+
+        .roadmap-item.complete .roadmap-marker {
+            background: var(--success);
+        }
+
+        .roadmap-item.progress .roadmap-marker {
+            background: var(--warning);
+        }
+
+        .roadmap-content h4 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .roadmap-content p {
+            font-size: 0.95rem;
+            color: #666;
+        }
+
+        footer {
+            background: var(--text);
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            .scenario-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .metric-box {
+                grid-template-columns: 1fr;
+            }
+
+            .roadmap-item {
+                flex-direction: column;
+            }
+
+            .roadmap-marker {
+                width: 100%;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🔗 A2A 통신 시나리오 & 구현 현황</h1>
+        <p>FinAllQ, InsuQ, MaintQ 다중홉 협업 통신 규약 및 완성도</p>
+    </header>
+
+    <div class="container">
+        <!-- 종합 진행도 -->
+        <div class="section progress-section">
+            <h2>📊 A2A 통합 완성도</h2>
+
+            <div class="metric-box">
+                <div class="metric">
+                    <div class="metric-label">프로토콜 설계</div>
+                    <div class="metric-value">85%</div>
+                    <div class="metric-label">구조 건전, 구현 진행 중</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">시나리오 설계</div>
+                    <div class="metric-value">100%</div>
+                    <div class="metric-label">10개 시나리오 정의 완료</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">어댑터 구현</div>
+                    <div class="metric-value">67%</div>
+                    <div class="metric-label">FinAllQ/InsuQ ✅, MaintQ ⏳</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">통합 테스트</div>
+                    <div class="metric-value">20%</div>
+                    <div class="metric-label">M1 프로토타입 수준</div>
+                </div>
+            </div>
+
+            <h3>월간 진행도</h3>
+            <p><strong>2026년 8월:</strong> M1 계약 레이어 완료</p>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 20%; background: linear-gradient(90deg, var(--primary), var(--accent));">
+                    20% (M1)
+                </div>
+            </div>
+            <p style="text-align: right; font-size: 0.9rem; color: #666;">목표: 2026년 10월 M2 (본격 통합)</p>
+        </div>
+
+        <!-- 프로토콜 평가 -->
+        <div class="section">
+            <h2>🏗️ 통신 규약 평가</h2>
+
+            <h3>항목별 점수</h3>
+            <div class="evaluation-grid">
+                <div class="evaluation-item good">
+                    <div class="evaluation-score">9/10</div>
+                    <div class="evaluation-label">HTTP 상태 코드</div>
+                </div>
+                <div class="evaluation-item good">
+                    <div class="evaluation-score">8/10</div>
+                    <div class="evaluation-label">요청/응답 스키마</div>
+                </div>
+                <div class="evaluation-item good">
+                    <div class="evaluation-score">8/10</div>
+                    <div class="evaluation-label">에러 처리</div>
+                </div>
+                <div class="evaluation-item warning">
+                    <div class="evaluation-score">6/10</div>
+                    <div class="evaluation-label">구현 vs 설계</div>
+                </div>
+                <div class="evaluation-item warning">
+                    <div class="evaluation-score">6/10</div>
+                    <div class="evaluation-label">보안</div>
+                </div>
+                <div class="evaluation-item warning">
+                    <div class="evaluation-score">5/10</div>
+                    <div class="evaluation-label">인증 (OAuth2)</div>
+                </div>
+            </div>
+
+            <h3>HTTP 상태 코드 규약 (9/10)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>상태</th>
+                        <th>의미</th>
+                        <th>사용 예</th>
+                        <th>상태</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>200 OK</td>
+                        <td>성공 완료</td>
+                        <td><code>lookup-clause</code>, <code>verify-collateral</code></td>
+                        <td><span class="status-badge status-complete">✅</span></td>
+                    </tr>
+                    <tr>
+                        <td>400 Bad Request</td>
+                        <td>스키마 검증 실패</td>
+                        <td>필드 누락, 타입 불일치</td>
+                        <td><span class="status-badge status-complete">✅</span></td>
+                    </tr>
+                    <tr>
+                        <td>404 Not Found</td>
+                        <td>스킬 미선언</td>
+                        <td>unknown_skill_id 호출</td>
+                        <td><span class="status-badge status-complete">✅</span></td>
+                    </tr>
+                    <tr>
+                        <td>501 Not Implemented</td>
+                        <td>스킬 미구현</td>
+                        <td><code>advise-hedge</code>, <code>lookup-clause</code> <span style="color:#c99b2c;font-size:0.85em">(2026-08-24: notify-risk-change는 구현 완료돼 더 이상 501 예시가 아님)</span></td>
+                        <td><span class="status-badge status-complete">✅</span></td>
+                    </tr>
+                    <tr>
+                        <td>502 Bad Gateway</td>
+                        <td>업스트림 불가</td>
+                        <td>InsuQ ai-engine 다운</td>
+                        <td><span class="status-badge status-complete">✅</span></td>
+                    </tr>
+                    <tr>
+                        <td>504 Gateway Timeout</td>
+                        <td>업스트림 타임아웃</td>
+                        <td>InsuQ 응답 지연</td>
+                        <td><span class="status-badge status-complete">✅</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>스키마 검증 (8/10)</h3>
+            <div class="endpoint-card">
+                <strong><span class="http-post">POST</span> /a2a/skills/{skill_id}</strong>
+                <p style="margin-top: 0.5rem;">
+                    Pydantic v2 기반 타입 검증 + 상태 전이 명확성<br>
+                    ✅ 멀티홉 추적 (request_chain_id)<br>
+                    ✅ 결정론적 상태 매핑<br>
+                    ⚠️ 선택 필드 정의 스키마마다 불일치
+                </p>
+            </div>
+        </div>
+
+        <!-- 시나리오 로드맵 -->
+        <div class="section">
+            <h2>🗺️ A2A 시나리오 로드맵</h2>
+
+            <h3>정의된 시나리오 (10개, 100% 설계 완료)</h3>
+
+            <div class="roadmap-item complete">
+                <div class="roadmap-marker">✅ S1-S4</div>
+                <div class="roadmap-content">
+                    <h4>FinAllQ: 여신 상품 심사 (기본 흐름)</h4>
+                    <p>
+                        <strong>S1:</strong> 상품 조회 →
+                        <strong>S2:</strong> 담보 검증 (InsuQ) →
+                        <strong>S3:</strong> 심사 결과 →
+                        <strong>S4:</strong> 송금 (Spring 통지)
+                    </p>
+                </div>
+            </div>
+
+            <div class="roadmap-item complete">
+                <div class="roadmap-marker">✅ S5</div>
+                <div class="roadmap-content">
+                    <h4>FinAllQ: 송금 취소 (요청 철회)</h4>
+                    <p>
+                        <code>request-withdrawal</code> 스킬로 송금 상태 추적 및 취소 처리
+                    </p>
+                </div>
+            </div>
+
+            <div class="roadmap-item complete">
+                <div class="roadmap-marker">✅ S6-S8</div>
+                <div class="roadmap-content">
+                    <h4>InsuQ: 보험 상품 상담</h4>
+                    <p>
+                        <strong>S6:</strong> 약관 조회 →
+                        <strong>S7:</strong> 갱신 상담 →
+                        <strong>S8:</strong> 담보 검증 (FinAllQ의 역)
+                    </p>
+                </div>
+            </div>
+
+            <div class="roadmap-item complete">
+                <div class="roadmap-marker">✅ S9-S10</div>
+                <div class="roadmap-content">
+                    <h4>MaintQ: 설비 진단 (기본 흐름)</h4>
+                    <p>
+                        <strong>S9:</strong> 진단 요청 →
+                        <strong>S10:</strong> 부품 식별 및 권장사항 생성
+                    </p>
+                </div>
+            </div>
+
+            <div class="roadmap-item progress">
+                <div class="roadmap-marker">⏳ S11-S15</div>
+                <div class="roadmap-content">
+                    <h4>다중홉 시나리오 (M2 대상)</h4>
+                    <p>
+                        <strong>S11:</strong> 목적물 변경 통지 →
+                        <strong>S12:</strong> 자산 평가 →
+                        <strong>S13:</strong> 보험료 재산정 →
+                        <strong>S14:</strong> 위험등급 변동 →
+                        <strong>S15:</strong> 보험금 청구
+                    </p>
+                </div>
+            </div>
+
+            <h3>프로젝트별 시나리오 분담</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>프로젝트</th>
+                        <th>시나리오</th>
+                        <th>역할</th>
+                        <th>의존성</th>
+                        <th>상태</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td rowspan="4"><strong>FinAllQ</strong></td>
+                        <td>S1-S4</td>
+                        <td>시작점 (리더)</td>
+                        <td>InsuQ lookup</td>
+                        <td><span class="status-badge status-complete">✅</span></td>
+                    </tr>
+                    <tr>
+                        <td>S5</td>
+                        <td>송금 취소</td>
+                        <td>없음</td>
+                        <td><span class="status-badge status-progress">⏳</span></td>
+                    </tr>
+                    <tr>
+                        <td>S8 (담보 검증)</td>
+                        <td>응답자</td>
+                        <td>InsuQ</td>
+                        <td><span class="status-badge status-complete">✅</span></td>
+                    </tr>
+                    <tr>
+                        <td>S13 (보험료 재산정)</td>
+                        <td>응답자</td>
+                        <td>InsuQ + Spring</td>
+                        <td><span class="status-badge status-pending">예정</span></td>
+                    </tr>
+                    <tr>
+                        <td rowspan="5"><strong>InsuQ</strong></td>
+                        <td>S6-S7</td>
+                        <td>보험 상담</td>
+                        <td>없음</td>
+                        <td><span class="status-badge status-complete">✅</span></td>
+                    </tr>
+                    <tr>
+                        <td>S8</td>
+                        <td>담보 검증</td>
+                        <td>FinAllQ</td>
+                        <td><span class="status-badge status-complete">✅</span></td>
+                    </tr>
+                    <tr>
+                        <td>S11</td>
+                        <td>목적물 변경 통지</td>
+                        <td>MaintQ</td>
+                        <td><span class="status-badge status-complete">✅</span></td>
+                    </tr>
+                    <tr>
+                        <td>S14</td>
+                        <td>위험등급 변동 통지</td>
+                        <td>MaintQ</td>
+                        <td><span class="status-badge status-complete" title="2026-08-24 갱신: Sprint 14로 스코핑 완료(판정 공식 확정) 후 구현 완료, main 병합(커밋 687d616), 실제 Docker 컨테이너에 A2A 헤더 규약으로 6개 경로 실측 검증까지 완료">✅ 구현 완료</span></td>
+                    </tr>
+                    <tr>
+                        <td>S15</td>
+                        <td>보험금 청구</td>
+                        <td>없음</td>
+                        <td><span class="status-badge status-complete">✅</span></td>
+                    </tr>
+                    <tr>
+                        <td rowspan="2"><strong>MaintQ</strong></td>
+                        <td>S9-S10</td>
+                        <td>설비 진단</td>
+                        <td>없음</td>
+                        <td><span class="status-badge status-progress">⏳</span></td>
+                    </tr>
+                    <tr>
+                        <td>S11-S14</td>
+                        <td>알림 송신</td>
+                        <td>InsuQ</td>
+                        <td><span class="status-badge status-pending">예정</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 어댑터 구현 현황 -->
+        <div class="section">
+            <h2>⚙️ A2A 어댑터 구현 현황</h2>
+
+            <h3>구현된 어댑터</h3>
+
+            <div class="roadmap-item complete">
+                <div class="roadmap-marker">✅ FinAllQ</div>
+                <div class="roadmap-content">
+                    <h4>FinAllQ Adapter (FastAPI, 포트 9101)</h4>
+                    <p>
+                        <strong>역할:</strong> 여신 심사 결과 → A2A 스킬로 변환<br>
+                        <strong>스킬:</strong> verify-collateral-insurance, request-withdrawal (2개)<br>
+                        <strong>매핑:</strong> TransferStatus 6종 → A2A status<br>
+                        <strong>구현:</strong> 2026-08-23 완료 (mapping.py)
+                    </p>
+                </div>
+            </div>
+
+            <div class="roadmap-item complete">
+                <div class="roadmap-marker">✅ InsuQ</div>
+                <div class="roadmap-content">
+                    <h4>InsuQ Adapter (FastAPI, 포트 9102)</h4>
+                    <p>
+                        <strong>역할:</strong> 보험약관 Q&A → A2A 스킬로 변환<br>
+                        <strong>스킬:</strong> lookup-clause (1개)<br>
+                        <strong>검증:</strong> Pydantic v2, 2중 거부 게이트<br>
+                        <strong>구현:</strong> 2026-08-23 완료
+                    </p>
+                </div>
+            </div>
+
+            <div class="roadmap-item progress">
+                <div class="roadmap-marker">⏳ MaintQ</div>
+                <div class="roadmap-content">
+                    <h4>MaintQ Adapter (FastAPI, 포트 9103)</h4>
+                    <p>
+                        <strong>역할:</strong> 설비 진단 → A2A 스킬로 변환<br>
+                        <strong>스킬:</strong> diagnose-equipment (1개) + 추가 예정<br>
+                        <strong>상태:</strong> 프로토타입 단계 (2026-08-23)<br>
+                        <strong>다음:</strong> S10 이후 부품 식별 스킬 추가
+                    </p>
+                </div>
+            </div>
+
+            <h3>어댑터 아키텍처</h3>
+            <div class="architecture-box">
+                <div class="architecture-flow">
+                    Client<br>
+                    &nbsp;&nbsp;↓<br>
+                    A2A Gateway (FastAPI)<br>
+                    &nbsp;&nbsp;↓<br>
+                    [FinAllQ Adapter] [InsuQ Adapter] [MaintQ Adapter]<br>
+                    &nbsp;&nbsp;↓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+                    FinAllQ Backend&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;InsuQ AI-Engine<br>
+                </div>
+            </div>
+        </div>
+
+        <!-- 구현 갭 분석 -->
+        <div class="section">
+            <h2>⚠️ 구현 갭 분석</h2>
+
+            <h3>Priority 1: 긴급 (M1 완료 후)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>항목</th>
+                        <th>현황</th>
+                        <th>목표</th>
+                        <th>영향도</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>request-withdrawal 트리거</strong></td>
+                        <td>설계만 완료, 구현 미연결</td>
+                        <td>FinAllQ에서 A2A 호출 점화</td>
+                        <td><span class="status-badge status-blocked">높음</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>assess-loan 엔드포인트</strong></td>
+                        <td>FinAllQ에서 미호출</td>
+                        <td>담보 검증 결과 기반 심사</td>
+                        <td><span class="status-badge status-blocked">높음</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>MaintQ A2A 호출</strong></td>
+                        <td>프로토타입 단계</td>
+                        <td>S9-S10 본격 연동</td>
+                        <td><span class="status-badge status-blocked">높음</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Priority 2: 개선 (M2 대상)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>항목</th>
+                        <th>현황</th>
+                        <th>목표</th>
+                        <th>영향도</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>실제 OAuth2 구현</strong></td>
+                        <td>OAuth2-mock (M1 임시)</td>
+                        <td>토큰 교환 실제 구현</td>
+                        <td><span class="status-badge status-pending">중간</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>2홉 에러 전파 정책</strong></td>
+                        <td>단계별 정의 미완성</td>
+                        <td>upstream 오류 시 호출부 판단 기준</td>
+                        <td><span class="status-badge status-pending">중간</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>토큰 캐시 고도화</strong></td>
+                        <td>기초 수준</td>
+                        <td>만료 추적, 갱신 로직 정교화</td>
+                        <td><span class="status-badge status-pending">중간</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 시나리오별 커버리지 -->
+        <div class="section">
+            <h2>🎯 시나리오별 커버리지</h2>
+
+            <h3>구현된 시나리오 (커버리지 60%)</h3>
+            <div class="scenario-grid">
+                <div class="scenario-card">
+                    <h4>📋 S1-S4: 여신 심사</h4>
+                    <div class="meta">FinAllQ → 의존성 2개</div>
+                    <ul>
+                        <li>✅ 상품 조회</li>
+                        <li>✅ 담보 검증</li>
+                        <li>✅ 심사 결과</li>
+                        <li>✅ 송금 (Spring)</li>
+                    </ul>
+                </div>
+
+                <div class="scenario-card">
+                    <h4>📋 S5: 송금 취소</h4>
+                    <div class="meta">FinAllQ, 의존성 1개</div>
+                    <ul>
+                        <li>✅ 송금 상태 추적</li>
+                        <li>✅ 취소 신청</li>
+                        <li>⏳ 확정 통지</li>
+                    </ul>
+                </div>
+
+                <div class="scenario-card">
+                    <h4>📋 S6-S7: 보험 상담</h4>
+                    <div class="meta">InsuQ, 의존성 없음</div>
+                    <ul>
+                        <li>✅ 약관 조회</li>
+                        <li>✅ 갱신 상담</li>
+                        <li>⏳ 상담 저장</li>
+                    </ul>
+                </div>
+
+                <div class="scenario-card">
+                    <h4>📋 S8: 담보 검증</h4>
+                    <div class="meta">InsuQ ← FinAllQ</div>
+                    <ul>
+                        <li>✅ 담보 인정</li>
+                        <li>✅ 보장액 계산</li>
+                        <li>✅ 부족 판정</li>
+                    </ul>
+                </div>
+
+                <div class="scenario-card">
+                    <h4>📋 S9-S10: 설비 진단</h4>
+                    <div class="meta">MaintQ, 의존성 없음</div>
+                    <ul>
+                        <li>✅ 진단 요청</li>
+                        <li>⏳ 부품 식별</li>
+                        <li>⏳ 권장사항</li>
+                    </ul>
+                </div>
+
+                <div class="scenario-card">
+                    <h4>📋 S11-S15: 다중홉</h4>
+                    <div class="meta">모든 프로젝트 연계</div>
+                    <ul>
+                        <li>✅ 변경 통지 (InsuQ notify-asset-change, 2026-08-23)</li>
+                        <li>⏳ 재산정</li>
+                        <li>✅ 보험금 청구 (InsuQ claim-insurance, 승인 큐 backend까지 E2E, 2026-08-23)</li>
+                        <li>✅ 위험등급 통지 (InsuQ notify-risk-change, S14 — 2026-08-24: Sprint 14 구현 완료, main 병합(687d616), 5개 A2A 스킬 전부 완료)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 핵심 메시지 -->
+        <div class="section" style="background: linear-gradient(135deg, rgba(33, 150, 243, 0.05) 0%, rgba(66, 165, 245, 0.05) 100%);">
+            <h2>💡 핵심 메시지</h2>
+            <div style="font-size: 1.1rem; line-height: 1.8; color: var(--text);">
+                <p>
+                    <strong>"통신 규약은 건전하고, 구현은 단계적으로 진행한다."</strong>
+                </p>
+                <ul style="margin-left: 1.5rem; margin-top: 1rem;">
+                    <li><strong>M1 (2026-08):</strong> 프로토콜 계약 레이어, OAuth2-mock</li>
+                    <li><strong>M2 (2026-10):</strong> 본격 통합 테스트, 실제 OAuth2</li>
+                    <li><strong>M3 (2026-12):</strong> 다중홉 시나리오 (S11-S15)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>평가 기준일: 2026-08-23 | 범위: agent_cards, adapters, A2A_DIAGRAMS.md v1.1</p>
+        <p style="font-size:0.85rem;color:#c99b2c">2026-08-24 InsuQ 부분 갱신: Sprint 13(A2A 트랙7)이 main에 병합되어 5개 스킬 중 4개(verify-collateral-insurance·advise-policy-renewal·notify-asset-change·claim-insurance) 완료, notify-risk-change(S14)는 Sprint 14로 스코핑돼 구현까지 완료됐습니다(main 병합, 커밋 687d616) — 5개 A2A 스킬 전부 완료. backend 테스트 423건·ai-engine 904건·frontend 114건, 전부 0 failures. 최신 출처: InsuQ 레포 docs/status_audit.html·docs/status.html (main 커밋 af22794). FinAllQ/MaintQ 관련 서술은 이 갱신 대상이 아님.</p>
+        <p>© 2026 A2A Integration Team</p>
+    </footer>
+</body>
+</html>

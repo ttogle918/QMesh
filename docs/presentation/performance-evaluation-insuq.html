@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InsuQ 성능 평가 및 기술 결정 분석</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f8f9fa;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, #00a86b 0%, #009d63 100%);
+            color: white;
+            padding: 60px 20px;
+            border-radius: 8px;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+
+        .date-info {
+            margin-top: 15px;
+            font-size: 0.95em;
+            opacity: 0.9;
+        }
+
+        .section {
+            background: white;
+            padding: 40px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .section h2 {
+            color: #00a86b;
+            font-size: 1.8em;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #00a86b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section h3 {
+            color: #009d63;
+            font-size: 1.3em;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        .emoji {
+            font-size: 1.3em;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #e8f7f0 0%, #d0ede7 100%);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 5px solid #00a86b;
+            text-align: center;
+        }
+
+        .metric-card .value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #00a86b;
+            margin: 10px 0;
+        }
+
+        .metric-card .label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.95em;
+        }
+
+        th {
+            background: #00a86b;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        .highlight-box {
+            background: #e8f7f0;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border-left: 4px solid #00a86b;
+        }
+
+        .flow-diagram {
+            background: #f0f4f9;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 5px solid #00a86b;
+        }
+
+        .flow-step {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+            font-size: 1.05em;
+        }
+
+        .step-icon {
+            background: #00a86b;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .step-desc {
+            color: #666;
+            font-size: 0.95em;
+            margin-top: 3px;
+        }
+
+        .comparison-table {
+            width: 100%;
+            margin: 20px 0;
+        }
+
+        .comparison-table th {
+            background: #00a86b;
+        }
+
+        .comparison-table .better {
+            background: #e8f7f0;
+            font-weight: 600;
+        }
+
+        .tech-stack {
+            background: linear-gradient(to right, #f5f9f8, #e8f7f0);
+            padding: 25px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 5px solid #00a86b;
+        }
+
+        .tech-item {
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
+            border-left: 3px solid #00a86b;
+        }
+
+        .tech-name {
+            font-weight: 700;
+            color: #00a86b;
+            font-size: 1.1em;
+        }
+
+        .tech-reason {
+            color: #666;
+            font-size: 0.95em;
+            margin-top: 5px;
+        }
+
+        .roadmap-item {
+            padding: 15px;
+            margin: 10px 0;
+            background: linear-gradient(to right, #f5f9f8, white);
+            border-left: 4px solid #00a86b;
+            border-radius: 4px;
+        }
+
+        .priority {
+            display: inline-block;
+            background: #00a86b;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.85em;
+            margin-right: 10px;
+        }
+
+        .finding-box {
+            padding: 15px;
+            margin: 10px 0;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 4px;
+        }
+
+        .finding-box strong {
+            color: #ff6f00;
+        }
+
+        footer {
+            text-align: center;
+            color: #999;
+            padding: 40px 20px;
+            font-size: 0.9em;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            .section {
+                page-break-inside: avoid;
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+            header {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏥 InsuQ 성능 평가 및 기술 결정 분석</h1>
+            <p class="subtitle">RAG 기반 보험약관 Q&A 에이전트 - 기술 선택, 성능 측정, 개선 로드맵</p>
+            <p class="date-info">분석 기간: Sprint 6 ~ Sprint 12 (2026-07-20 ~ 2026-08-20) | 평가 데이터: 46개 실험</p>
+        </header>
+
+        <!-- 1. 도메인 및 목표 -->
+        <div class="section">
+            <h2><span class="emoji">📋</span> InsuQ: 프로젝트 정의 및 역할</h2>
+
+            <h3>핵심 미션</h3>
+            <p><strong>RAG 기반 보험약관 Q&A 에이전트</strong> — 설계사가 고객 앞에서 30초 안에 약관 근거를 찾아주는 도구</p>
+
+            <div class="highlight-box">
+                <strong>🎯 목표 지표</strong><br>
+                • Hit@5 (검색) ≥ 0.85<br>
+                • 답변 정확도 ≥ 80%<br>
+                • 거부 정확도 ≥ 90%<br>
+                • 레이턴시 ≤ 30초
+            </div>
+
+            <h3>페르소나 이원화</h3>
+            <table>
+                <tr>
+                    <th>사용자</th>
+                    <th>상황</th>
+                    <th>필요한 것</th>
+                </tr>
+                <tr>
+                    <td>설계사/GA (주 사용자)</td>
+                    <td>고객 상담 중 약관 검색 필요</td>
+                    <td>30초 안에 근거 조항 3~5개</td>
+                </tr>
+                <tr>
+                    <td>개인 가입자</td>
+                    <td>내 보장 범위 확인</td>
+                    <td>표준 약관 vs 내 특약 비교</td>
+                </tr>
+            </table>
+
+            <h3>FinAllQ와의 연계</h3>
+            <p><strong>A2A(Agent-to-Agent) 응답자 역할</strong> — 5개 스킬로 대출심사·청구 판정 시 근거 제공. <strong>2026-08-23(Sprint 13) 갱신: 5개 중 4개 구현 완료</strong>, backend(Spring, 8081) 실동작:</p>
+            <ul style="margin-left: 20px; margin-top: 10px;">
+                <li>✅ <strong>verify-collateral-insurance</strong> (S8, S13) — 담보보험 검증, 비례보상 계산 완료</li>
+                <li>✅ <strong>advise-policy-renewal</strong> (S7) — 갱신 상담, 보험료 변동률 결정론적 산출</li>
+                <li>✅ <strong>notify-asset-change</strong> (S11) — 목적물 변경 통지, Sprint 13 완료</li>
+                <li>✅ <strong>notify-risk-change</strong> (S14) — 위험등급 변동 통지, 완료(<span style="color:#c99b2c">2026-08-24 갱신: Sprint 14로 스코핑 완료 후 구현 완료, main 병합(커밋 687d616)</span>)</li>
+                <li>✅ <strong>claim-insurance</strong> (S15) — 보험금 청구, Sprint 13 완료. <code>requires_human_approval:true</code> 하드 리터럴, 승인 큐 backend까지 E2E 검증(실제 스크립트)</li>
+                <li>✅ <strong>lookup-clause</strong> — 약관 근거 조회, a2a_adapter(FastAPI, :9102)</li>
+            </ul>
+            <div class="highlight-box" style="margin-top:14px;border-color:#c99b2c">
+                <strong>2026-08-24 갱신 — Sprint 13이 main에 병합됐고, 그 이후로 더 진행됐습니다.</strong><br>
+                <code>verify-collateral-insurance</code>의 <code>effective_recovery</code> 필드(지금까지 항상 <code>null</code>)를 <code>claim-insurance</code>의 비례보상 공식(손해액 × coverage_amount / (insured_value × coinsurance_ratio))으로 산정하도록 구현 완료. 인덱서의 <code>recreate: false</code> 증분 인덱싱 검증 로직 버그(완전일치 비교 → 부분집합 비교)를 발견·수정했고, 트랙4(화재보험) 4개 상품(주택화재보험·성공예감·비즈앤안전파트너·아파트안심보험) 증분 인덱싱으로 <code>insuq_track4</code> 컬렉션이 2,214 → 6,505 포인트가 됨. 테스트: backend 398 → 423건(+25) · ai-engine 875 → 904건(+29) · frontend vitest 77 → 114건(+37), 전부 0 failures. 최신 출처: InsuQ 레포 <code>docs/status_audit.html</code>·<code>docs/status.html</code>(main 커밋 <code>af22794</code>).
+            </div>
+        </div>
+
+        <!-- 2. 기술 스택 -->
+        <div class="section">
+            <h2><span class="emoji">⚙️</span> 기술 스택 및 선택 근거</h2>
+
+            <h3>3층 아키텍처</h3>
+            <div class="flow-diagram">
+                <div class="flow-step">
+                    <div class="step-icon">1</div>
+                    <div class="step-content">
+                        <div class="step-label">Frontend (Next.js)</div>
+                        <div class="step-desc">사용자 인터페이스</div>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-icon">2</div>
+                    <div class="step-content">
+                        <div class="step-label">Backend (Spring Boot)</div>
+                        <div class="step-desc">인증·세션·계약·A2A 수신부</div>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-icon">3</div>
+                    <div class="step-content">
+                        <div class="step-label">AI Engine (FastAPI)</div>
+                        <div class="step-desc">RAG·에이전트·검색·생성</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>핵심 컴포넌트</h3>
+
+            <div class="tech-stack">
+                <div class="tech-item">
+                    <div class="tech-name">🔍 벡터 스토어: Qdrant</div>
+                    <div class="tech-reason">
+                        <strong>선택 이유:</strong> 하이브리드 검색(sparse+dense) 네이티브 지원, RRF 직접 구현 불필요, 메타데이터 필터링<br>
+                        <strong>대안 검토:</strong> FAISS는 하이브리드를 수동 구현해야 함 → "빨리 돌아가는 것부터" 원칙상 기각
+                    </div>
+                </div>
+
+                <div class="tech-item">
+                    <div class="tech-name">🤖 생성 모델: Gemini 3.5 Flash</div>
+                    <div class="tech-reason">
+                        <strong>선택 이유:</strong> 레이턴시 p95 10.4s, 거부 정확도 100%, 4/4축 게이트 통과<br>
+                        <strong>경합:</strong> NVIDIA nemotron (p95 44.7s → 초과, 레이턴시 악순환), OpenAI gpt-4 (비용)<br>
+                        <strong>LLM 변경 이력:</strong> nemotron → Gemini (EXP-003, 2026-07-20)
+                    </div>
+                </div>
+
+                <div class="tech-item">
+                    <div class="tech-name">🔤 임베딩: NVIDIA NIM API (nemotron-3-embed-1b)</div>
+                    <div class="tech-reason">
+                        <strong>선택 이유:</strong> 2048차원으로 충분한 검색 품질, "빨리 돌아가는 것부터" 원칙<br>
+                        <strong>성능:</strong> Hit@5 1.000 (MiniLM 0.636 vs nemotron 1.000)<br>
+                        <strong>레이턴시 실측:</strong> 추정 0.5s → 실측 p95 2.765s (API 왕복이 지배)
+                    </div>
+                </div>
+            </div>
+
+            <h3>데이터 소유권 경계 (재논의 금지)</h3>
+            <table>
+                <tr>
+                    <th>저장소</th>
+                    <th>내용</th>
+                    <th>소유자</th>
+                    <th>접근 방식</th>
+                </tr>
+                <tr>
+                    <td><strong>Qdrant + data/</strong></td>
+                    <td>약관 청크·골든셋</td>
+                    <td>ai-engine</td>
+                    <td>인덱싱 API 호출</td>
+                </tr>
+                <tr>
+                    <td><strong>RDB (계약, 사용자)</strong></td>
+                    <td>사용자·상담이력·계약</td>
+                    <td>backend(Spring)</td>
+                    <td>ai-engine은 접근 안 함</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- 3. 성능 평가 데이터 -->
+        <div class="section">
+            <h2><span class="emoji">📊</span> 성능 평가 데이터 (측정 기반)</h2>
+
+            <h3>Baseline 확정 (EXP-008, 2026-07-27)</h3>
+            <p><strong>실손의료보험 30문항 골든셋 기준</strong></p>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="label">Hit@5</div>
+                    <div class="value">0.8333</div>
+                    <div class="label">완료기준 0.85 근접 (미달)</div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">Hit@3</div>
+                    <div class="value">0.5833</div>
+                    <div class="label">14/24 문항</div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">Hit@1</div>
+                    <div class="value">0.2083</div>
+                    <div class="label">5/24 문항</div>
+                </div>
+                <div class="metric-card">
+                    <div class="label">검색 p50</div>
+                    <div class="value">0.53s</div>
+                    <div class="label">LLM 제외</div>
+                </div>
+            </div>
+
+            <table>
+                <tr>
+                    <th>지표</th>
+                    <th>값</th>
+                    <th>비고</th>
+                </tr>
+                <tr>
+                    <td><strong>Hit@5 (strict)</strong></td>
+                    <td>0.5833</td>
+                    <td>엄격한 정의 (첫 문항만)</td>
+                </tr>
+                <tr>
+                    <td><strong>레이턴시 p95</strong></td>
+                    <td>0.5838s</td>
+                    <td>검색 단계만 (생성 제외)</td>
+                </tr>
+                <tr>
+                    <td><strong>난이도별 Hit@5</strong></td>
+                    <td>easy 0.857 / medium 0.846 / hard 0.750</td>
+                    <td>어려운 문항일수록 낮음</td>
+                </tr>
+            </table>
+
+            <h3>주요 실험 결과</h3>
+
+            <h4>🔄 도구 루프 효과 (EXP-007, 2026-07-21)</h4>
+            <table class="comparison-table">
+                <tr>
+                    <th>지표</th>
+                    <th>tools_off</th>
+                    <th>tools_on</th>
+                    <th>개선</th>
+                </tr>
+                <tr>
+                    <td><strong>오거부율</strong> (답변 가능한데 거부)</td>
+                    <td>30%</td>
+                    <td class="better">20%</td>
+                    <td>↓ 10%p</td>
+                </tr>
+                <tr>
+                    <td>근거 건수</td>
+                    <td>5.0건</td>
+                    <td class="better">8.4건</td>
+                    <td>↑</td>
+                </tr>
+                <tr>
+                    <td>레이턴시</td>
+                    <td>11.4s / 18.5s</td>
+                    <td>15.7s / 23.8s</td>
+                    <td>↑ 예산 축소</td>
+                </tr>
+                <tr>
+                    <td>도구 사용률</td>
+                    <td>0%</td>
+                    <td class="better">83%</td>
+                    <td>높음</td>
+                </tr>
+            </table>
+
+            <div class="finding-box">
+                <strong>발견:</strong> 오거부를 10%p 줄일 수 있지만, 레이턴시 예산이 11.5s → 6.2s로 축소. 도구 루프는 효과적이나 예산 여유 재계산 필수.
+            </div>
+
+            <h4>🔍 하이브리드 검색 vs 벡터 Only (EXP-009~010)</h4>
+            <table class="comparison-table">
+                <tr>
+                    <th>설정</th>
+                    <th>Hit@1</th>
+                    <th>Hit@5</th>
+                    <th>p95 레이턴시</th>
+                    <th>판정</th>
+                </tr>
+                <tr>
+                    <td><strong>Vector Only (baseline)</strong></td>
+                    <td>0.3333</td>
+                    <td class="better">0.8333</td>
+                    <td>0.622s</td>
+                    <td>기준</td>
+                </tr>
+                <tr>
+                    <td>Hybrid (BM25+RRF)</td>
+                    <td>0.2917</td>
+                    <td>0.7917</td>
+                    <td>0.587s</td>
+                    <td>기각</td>
+                </tr>
+                <tr>
+                    <td>+ Rerank (bge-reranker)</td>
+                    <td>0.4167</td>
+                    <td>0.8750</td>
+                    <td>98.195s 🚨</td>
+                    <td>기각</td>
+                </tr>
+                <tr>
+                    <td>+ Rerank (mmarco)</td>
+                    <td>0.3333</td>
+                    <td>0.7500</td>
+                    <td>4.270s</td>
+                    <td>기각</td>
+                </tr>
+            </table>
+
+            <div class="finding-box">
+                <strong>결론:</strong> 하이브리드 검색은 모든 지표에서 음수 (기각). 리랭커는 품질 향상(bge) 또는 레이턴시 개선(mmarco) 중 택일할 수 없음. 현재 baseline 유지.
+            </div>
+
+            <h4>🤖 생성 모델 비교 (EXP-002~003)</h4>
+            <table class="comparison-table">
+                <tr>
+                    <th>모델</th>
+                    <th>거부 정확도</th>
+                    <th>단정 위반</th>
+                    <th>p95</th>
+                    <th>게이트</th>
+                </tr>
+                <tr>
+                    <td>NVIDIA nemotron</td>
+                    <td>12/12</td>
+                    <td>1/24</td>
+                    <td>44.7s 🚨</td>
+                    <td>FAIL</td>
+                </tr>
+                <tr>
+                    <td class="better"><strong>Gemini 3.5 Flash</strong></td>
+                    <td class="better">12/12</td>
+                    <td class="better">0/24</td>
+                    <td class="better">10.4s</td>
+                    <td class="better">PASS</td>
+                </tr>
+            </table>
+
+            <div class="finding-box">
+                <strong>LLM 모델 변경 분석:</strong> nemotron의 타임아웃 악순환(25s → exponential backoff 재시도) 문제로 완전히 불합격. Gemini는 4/4축 게이트 통과. 이는 인프라 개선이 아니라 모델 변경으로만 해결 가능.
+            </div>
+        </div>
+
+        <!-- 4. 거부 및 방어선 -->
+        <div class="section">
+            <h2><span class="emoji">🛡️</span> 거부 게이트: 2중 방어선 설계</h2>
+
+            <div class="flow-diagram">
+                <div class="flow-step">
+                    <div class="step-icon">①</div>
+                    <div class="step-content">
+                        <div class="step-label">사전 필터 (LLM 호출 전)</div>
+                        <div class="step-desc">근거 0건 OR 점수 미달 → LLM 호출 없이 즉시 거부</div>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-icon">📚</div>
+                    <div class="step-content">
+                        <div class="step-label">임베딩 & Qdrant 검색</div>
+                        <div class="step-desc">Top-5 청크 추출 (자식 단위)</div>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-icon">②</div>
+                    <div class="step-content">
+                        <div class="step-label">사후 검증 (생성 후)</div>
+                        <div class="step-desc">인용 검증 & 단정 표현 강등 (결정론적, LLM 불필요)</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>설계 원칙</h3>
+            <p><strong>"보험 오답의 금전 피해가 크므로, 환각 방지가 최우선"</strong></p>
+            <p style="margin-top: 10px;">LLM 호출 전에 확보할 수 있는 수비는 모두 가동. 근거 확보 단계에서 이미 90% 이상 필터링 가능.</p>
+
+            <h3>실측 거부 성능</h3>
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>결과</th>
+                    <th>목표</th>
+                    <th>상태</th>
+                </tr>
+                <tr>
+                    <td><strong>거부 정확도</strong> (거부해야 할 때 거부)</td>
+                    <td>100%</td>
+                    <td>≥90%</td>
+                    <td>✅ 달성</td>
+                </tr>
+                <tr>
+                    <td><strong>오거부율</strong> (답변 가능한데 거부)</td>
+                    <td>~5% (도구 최적화)</td>
+                    <td>&lt; 5%</td>
+                    <td>⏳ 경계</td>
+                </tr>
+                <tr>
+                    <td><strong>비결정성</strong> (반복 실행 시 다른 답변)</td>
+                    <td>조사 중</td>
+                    <td>0건</td>
+                    <td>⏳ 미해결</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- 5. 골든셋 및 평가 데이터 -->
+        <div class="section">
+            <h2><span class="emoji">🏆</span> 골든셋 태깅 및 성능 지표</h2>
+
+            <h3>골든셋 구성</h3>
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>규모</th>
+                    <th>상태</th>
+                </tr>
+                <tr>
+                    <td><strong>Part 1 (실손의료)</strong></td>
+                    <td>30문항</td>
+                    <td>✅ 완료 (난이도 분류)</td>
+                </tr>
+                <tr>
+                    <td><strong>Part 2 (화재·재물)</strong></td>
+                    <td>20문항</td>
+                    <td>⏳ 사람 검수 대기</td>
+                </tr>
+                <tr>
+                    <td><strong>난이도 분류</strong></td>
+                    <td>easy / medium / hard</td>
+                    <td>✅ 완료</td>
+                </tr>
+            </table>
+
+            <h3>태깅 문제 해결 이력</h3>
+
+            <h4>🔴 Issue 1: false_refusal_rate의 정의 혼동 (EXP-040, 2026-08-14)</h4>
+            <div class="finding-box">
+                <strong>문제:</strong> "과잉 거부 4건"이 보고되었으나, 분석 결과:<br>
+                • (a) 근거 없는데 거부 (정당) — 검색 실패 2건<br>
+                • (b) 근거 있는데 거부 (오거부) — 방어선 오탐 1건<br>
+                • (c) 간헐적 (비결정성) — 도구 루프 영향 1건<br>
+                <br>
+                <strong>해결:</strong> gold_article 검색 여부로 분리해 지표 정의 명확화 (TASK-B08)
+            </div>
+
+            <h4>🟠 Issue 2: policy_part 문자열 매칭 문제 (EXP-040, 2026-08-14)</h4>
+            <div class="finding-box">
+                <strong>문제:</strong> 코퍼스의 16.1% (356/2,214 청크)가 "보통약관(제3장 …)" 형태로 저장되어<br>
+                모델의 일반 명칭 "보통약관" 인용과 매칭되지 않음<br>
+                → 환각으로 오판정<br>
+                <br>
+                <strong>선택지:<br>
+                A. 괄호 떼고 범주 뭉치기 → 다중 조항 오매칭 위험<br>
+                B. 검증 실패 → 거부 아니라 "판단 유보"로 강등 (권장) ✅<br>
+                C. 생성 프롬프트로 정확 인용 유도 → 의존성 높음</strong>
+            </div>
+
+            <h4>🟡 Issue 3: 캘리브레이션 리포트의 모델 미기록 (TASK-202i)</h4>
+            <div class="finding-box">
+                <strong>문제:</strong> 평가 리포트가 사용한 모델(`generation.llm_model`, `judge.llm_model`)을 기록하지 않음<br>
+                → 게이트가 "모델 교체"를 검증하지 못함 → 순환 평가 위험<br>
+                <br>
+                <strong>해결:</strong> 리포트에 모델 정보 추가 + 게이트 로직 강화 (미수정, 백로그 등록)
+            </div>
+        </div>
+
+        <!-- 6. 코퍼스 및 검색 -->
+        <div class="section">
+            <h2><span class="emoji">📚</span> 코퍼스 규모 및 검색 파이프라인</h2>
+
+            <h3>코퍼스 구성</h3>
+            <table>
+                <tr>
+                    <th>상품</th>
+                    <th>청크 수 (자식)</th>
+                    <th>상위 조 (부모)</th>
+                    <th>상태</th>
+                </tr>
+                <tr>
+                    <td>실손의료보험</td>
+                    <td>610개</td>
+                    <td>117개</td>
+                    <td>✅ 완료</td>
+                </tr>
+                <tr>
+                    <td>화재·재물보험 (3개사)</td>
+                    <td>2,214개</td>
+                    <td>자사/타사 혼재</td>
+                    <td>⏳ 트랙 2 준비 중</td>
+                </tr>
+            </table>
+
+            <h3>검색 파이프라인 성능 (실측)</h3>
+            <table>
+                <tr>
+                    <th>단계</th>
+                    <th>추정</th>
+                    <th>실측</th>
+                    <th>격차</th>
+                    <th>원인</th>
+                </tr>
+                <tr>
+                    <td><strong>질의 임베딩</strong></td>
+                    <td>0.5s</td>
+                    <td>2.765s (p95)</td>
+                    <td>5.5배</td>
+                    <td>API 왕복 시간이 벡터 연산 압도</td>
+                </tr>
+                <tr>
+                    <td><strong>Qdrant 검색</strong></td>
+                    <td>0.1s</td>
+                    <td>0.004s (p95)</td>
+                    <td>25배 빠름</td>
+                    <td>인덱싱 효율</td>
+                </tr>
+                <tr>
+                    <td><strong>레이턴시 예산 영향</strong></td>
+                    <td>3.7s</td>
+                    <td>21.3s</td>
+                    <td>수정</td>
+                    <td>D17 `latency.reserve_s`: 12s → 14s 상향</td>
+                </tr>
+            </table>
+
+            <h3>청킹 전략 (확정)</h3>
+            <p><strong>"작게 검색하고 크게 답한다"</strong></p>
+            <table>
+                <tr>
+                    <th>레벨</th>
+                    <th>용도</th>
+                    <th>근거</th>
+                </tr>
+                <tr>
+                    <td><strong>자식(항)</strong></td>
+                    <td>BM25·벡터 인덱싱, RRF, 리랭킹</td>
+                    <td>정밀한 검색·순위 조정 가능</td>
+                </tr>
+                <tr>
+                    <td><strong>부모(조)</strong></td>
+                    <td>생성 직전에만 확장</td>
+                    <td>컨텍스트 충분, 환각 방지</td>
+                </tr>
+            </table>
+
+            <div class="highlight-box">
+                <strong>⚠️ 중요:</strong> 조 번호 충돌 70건 (약관 구조상 3개장 × 3개조/장 반복)<br>
+                → <strong>policy_part 필드 인용 필수</strong> (조 번호만으로는 환각 탐지 불가)
+            </div>
+        </div>
+
+        <!-- 7. A2A 연계 -->
+        <div class="section">
+            <h2><span class="emoji">🔗</span> FinAllQ 연계: A2A 기술 결정</h2>
+
+            <h3>InsuQ의 역할</h3>
+            <p><strong>"항상 응답자" — 다른 도메인에 요청을 보내지 않음</strong></p>
+
+            <h3>5개 스킬 (A2A 계약) — 2026-08-23(Sprint 13) 갱신, 4/5 구현 완료</h3>
+            <table>
+                <tr>
+                    <th>스킬 ID</th>
+                    <th>시나리오</th>
+                    <th>역할</th>
+                    <th>근거 필수</th>
+                    <th>구현 상태</th>
+                </tr>
+                <tr>
+                    <td><code>verify-collateral-insurance</code></td>
+                    <td>S8, S13</td>
+                    <td>담보보험 검증</td>
+                    <td>✅</td>
+                    <td>✅ 완료</td>
+                </tr>
+                <tr>
+                    <td><code>advise-policy-renewal</code></td>
+                    <td>S7</td>
+                    <td>갱신 상담</td>
+                    <td>✅</td>
+                    <td>✅ 완료</td>
+                </tr>
+                <tr>
+                    <td><code>notify-asset-change</code></td>
+                    <td>S11</td>
+                    <td>목적물 변경</td>
+                    <td>✅</td>
+                    <td>✅ 완료 (Sprint 13)</td>
+                </tr>
+                <tr>
+                    <td><code>notify-risk-change</code></td>
+                    <td>S14</td>
+                    <td>위험등급 변동</td>
+                    <td>✅</td>
+                    <td>✅ 완료 (Sprint 14). <span style="color:#c99b2c">2026-08-24 갱신: Sprint 14 스코핑 완료 후 구현 완료, main 병합(커밋 687d616), 실제 컨테이너 A2A 헤더 규약으로 6개 경로 실측 검증까지 완료</span></td>
+                </tr>
+                <tr>
+                    <td><code>claim-insurance</code></td>
+                    <td>S15</td>
+                    <td>보험금 청구</td>
+                    <td>✅</td>
+                    <td>✅ 완료 (Sprint 13) — 승인 큐 backend E2E 검증</td>
+                </tr>
+                <tr>
+                    <td><code>lookup-clause</code></td>
+                    <td>제안</td>
+                    <td>약관 근거 조회</td>
+                    <td>✅</td>
+                    <td>✅ 완료 — a2a_adapter(FastAPI, :9102)</td>
+                </tr>
+            </table>
+
+            <h3>인증 및 데이터 흐름</h3>
+            <div class="highlight-box">
+                <strong>원칙:</strong> ai-engine은 "누가·권한"을 모른다<br>
+                <br>
+                • 계약 조회 필요 → Spring이 페이로드로 전달<br>
+                • MCP 도구는 신원 불필요 것만 노출 (약관 검색)<br>
+                • A2A 스킬은 Spring이 호출자 검증 후 ai-engine 호출<br>
+                <br>
+                <strong>이점:</strong> 권한 사고 표면 제로, 테스트·CI 환경에서 웹 없이 순수 Python 실행 가능
+            </div>
+
+            <h3>제안: 거부 상태 추가 (구현 대기)</h3>
+            <div class="finding-box">
+                <strong>현재:</strong> 모든 스킬 `status`가 `["completed"]` 단일값<br>
+                <strong>문제:</strong> "근거 없음"을 표현할 방법이 없음<br>
+                <br>
+                <strong>제안 (A2A_Q 합의 필요):</strong><br>
+                <code>status: "rejected", rejection_reason: "no_evidence_found|citation_unverified"</code><br>
+                <code>HTTP 200</code> (거부는 정상 동작, 4xx/5xx 아님)
+            </div>
+        </div>
+
+        <!-- 8. 로드맵 -->
+        <div class="section">
+            <h2><span class="emoji">🗺️</span> 개선 로드맵</h2>
+
+            <h3>진행 중 및 계획</h3>
+
+            <div class="roadmap-item">
+                <span class="priority">1순위</span>
+                <strong>하이브리드 검색 + 리랭커</strong><br>
+                상태: 실험 완료, 기각 (Hit@K 0.83 → 0.85 미달)<br>
+                근거: 개선 입증 실패
+            </div>
+
+            <div class="roadmap-item">
+                <span class="priority">2순위</span>
+                <strong>멀티홉 조항 추적 (refs)</strong><br>
+                상태: 구현 완료<br>
+                효과: 부모 조항 자동 확장 (깊이 2~3)
+            </div>
+
+            <div class="roadmap-item">
+                <span class="priority">2순위</span>
+                <strong>분쟁사례 폴백</strong><br>
+                상태: 스텁<br>
+                용도: 판정 유보 시 금감원 사례 추가 검색
+            </div>
+
+            <div class="roadmap-item">
+                <span class="priority">3순위</span>
+                <strong>2~3개사 약관 확대</strong><br>
+                상태: 미착수<br>
+                조건: 라우터 '비교' 분기 선행조건
+            </div>
+
+            <h3>게이트 기준</h3>
+            <table>
+                <tr>
+                    <th>체크포인트</th>
+                    <th>상태</th>
+                    <th>의미</th>
+                </tr>
+                <tr>
+                    <td><strong>Baseline 확정</strong></td>
+                    <td>✅ 완료</td>
+                    <td>Hit@5 0.8333 기준선 확립</td>
+                </tr>
+                <tr>
+                    <td><strong>TASK-301 리랭커</strong></td>
+                    <td>⏳ 진행 중 (기각)</td>
+                    <td>성능 입증 실패로 현재 기각 상태</td>
+                </tr>
+                <tr>
+                    <td><strong>답변정확도·거부정확도</strong></td>
+                    <td>⏳ 측정 대기</td>
+                    <td>골든셋 확대(Part 2) 후 측정</td>
+                </tr>
+                <tr>
+                    <td><strong>새 트랙(2·3) 착수</strong></td>
+                    <td>⏸️ 보류</td>
+                    <td>위 측정 백본 완료까지 연기</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- 9. 핵심 숫자 -->
+        <div class="section">
+            <h2><span class="emoji">📌</span> 핵심 숫자 정리</h2>
+
+            <h3>성능 지표</h3>
+            <table>
+                <tr>
+                    <th>항목</th>
+                    <th>현재</th>
+                    <th>목표</th>
+                    <th>상태</th>
+                </tr>
+                <tr>
+                    <td>Hit@5 (검색)</td>
+                    <td>0.8333</td>
+                    <td>≥0.85</td>
+                    <td>미달 (0.0167p)</td>
+                </tr>
+                <tr>
+                    <td>검색 p95</td>
+                    <td>0.584s</td>
+                    <td>≤30s</td>
+                    <td>✅ 통과</td>
+                </tr>
+                <tr>
+                    <td>생성 p95</td>
+                    <td>10.4s</td>
+                    <td>≤30s</td>
+                    <td>✅ 통과</td>
+                </tr>
+                <tr>
+                    <td>거부 정확도</td>
+                    <td>100%</td>
+                    <td>≥90%</td>
+                    <td>✅ 통과</td>
+                </tr>
+            </table>
+
+            <h3>데이터 규모</h3>
+            <ul style="margin-left: 20px; margin-top: 10px;">
+                <li><strong>코퍼스:</strong> 2,824개 청크 (실손 610 + 화재·재물 2,214)</li>
+                <li><strong>평가 데이터:</strong> 46개 실험 리포트 (전수 기록)</li>
+                <li><strong>골든셋:</strong> 30문항 (Part 1 완료, Part 2 대기)</li>
+                <li><strong>레이턴시 예산:</strong> 30초 전체 (검색 <1s + 생성 <15s)</li>
+            </ul>
+        </div>
+
+        <!-- 10. 결론 -->
+        <div class="section">
+            <h2><span class="emoji">✨</span> 결론</h2>
+
+            <div class="highlight-box">
+                <strong>InsuQ의 가장 중요한 특성:</strong><br>
+                모든 기술 선택을 <strong>측정과 비교</strong>로 검증한다.<br>
+                (벡터 vs MiniLM, nemotron vs Gemini, 하이브리드 vs 단일 검색)<br>
+                <br>
+                성능이 목표에 0.0167p 미달했지만, 다음 개선 방향이 명확하다:
+                <br>
+                → 하이브리드는 기각, 모델/프롬프트 재검토로 Hit@5 1건 추가 필요
+            </div>
+
+            <h3>3가지 핵심 성과</h3>
+            <div class="metrics-grid" style="margin-top: 20px;">
+                <div class="metric-card">
+                    <h4>🔬 측정 기반 의사결정</h4>
+                    <div class="label">46개 실험으로 모든 기술 선택 검증</div>
+                </div>
+                <div class="metric-card">
+                    <h4>🛡️ 환각 방지 설계</h4>
+                    <div class="label">2중 방어선 + 거부 100% 정확도</div>
+                </div>
+                <div class="metric-card">
+                    <h4>🔗 A2A 통합 준비</h4>
+                    <div class="label">5개 스킬로 FinAllQ 연계</div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>InsuQ 기술 문서 | 작성자: 개발팀 | 분석 기간: Sprint 6~12 (2026-07-20 ~ 2026-08-20)</p>
+            <p>이 자료는 기술 의사결정의 근거를 제공하며, 발표 및 아키텍처 리뷰 시 참고자료로 활용됩니다.</p>
+        </footer>
+    </div>
+</body>
+</html>

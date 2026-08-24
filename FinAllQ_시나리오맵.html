@@ -349,7 +349,8 @@
     </div>
 
     <div class="connect-note"><b>연결되는 지점</b> S5·S12의 "요청 접수"는 통신 다이어그램의 MaintQ↔FinAllQ 선에서 오는 요청이 그대로 들어오는 자리입니다. S8·S13의 두 번째 다리(InsuQ에 물어보는 부분)가 통신 다이어그램의 FinAllQ↔InsuQ 선입니다. S15는 InsuQ가 먼저 시작해서 여기로 상담이 넘어오는 반대 방향입니다.
-    <br><br><b>🔑 2026-08-24 갱신</b> — S5가 타는 레일(<b>S20 결재 흐름 + S21 이상거래 탐지 + 감사 로그</b>)과 S8의 <b>여신 심사 도메인(Sprint 12·14·15·17)</b>은 <b>다 깔려 있고, 바깥으로 난 문(Agent Card · :9101 어댑터)도 이미 열려서 7개 스킬(S5·S6·S8·S12·S13·S15·S16) 전부 실동작합니다.</b> Sprint 18에서 나머지 5개 스킬을 실구현했고(backend-core 변경 0줄, 사전 조사대로), 같은 날 FinAllQ·InsuQ·MaintQ 3사 로컬 동시 기동으로 <b>실제 크로스레포 A2A 통신까지 확인</b>했습니다(MaintQ 실코드가 트리거한 request-withdrawal·assess-loan e2e 200, 나머지 5개는 MaintQ 쪽 트리거가 아직 없어 동일 payload 직접 호출로 검증). 이 검증 과정에서 assess-loan(S8)의 A2A 스키마가 실제 계약과 달랐던 것도 발견해 계약대로 재설계했습니다. 남은 건 두 가지입니다 — ① S13이 필요로 하는 InsuQ 쪽 비례보상 필드 중 <code>insured_value</code>는 InsuQ가 실제로 반환함을 확인했으나 <code>effective_recovery</code>는 InsuQ 시드 데이터의 <code>coinsurance_ratio</code> 문제로 아직 null(InsuQ 쪽 이슈, 교차 프로젝트 의존은 유지) ② 파트너 자격증명·머신 신원(131·132, QMesh 착수 전제)이 정식 착수 전이라 지금은 M1 목업 토큰 단계(단, 이 목업 단계 자체는 실제로 동작함을 확인 — InsuQ는 고정 토큰+자기신고 파트너 ID 방식으로 이미 실사용 중).</div>
+    <br><br><b>🔑 2026-08-24 갱신</b> — S5가 타는 레일(<b>S20 결재 흐름 + S21 이상거래 탐지 + 감사 로그</b>)과 S8의 <b>여신 심사 도메인(Sprint 12·14·15·17)</b>은 <b>다 깔려 있고, 바깥으로 난 문(Agent Card · :9101 어댑터)도 이미 열려서 7개 스킬(S5·S6·S8·S12·S13·S15·S16) 전부 실동작합니다.</b> Sprint 18에서 나머지 5개 스킬을 실구현했고(backend-core 변경 0줄, 사전 조사대로), 같은 날 FinAllQ·InsuQ·MaintQ 3사 로컬 동시 기동으로 <b>실제 크로스레포 A2A 통신까지 확인</b>했습니다(MaintQ 실코드가 트리거한 request-withdrawal·assess-loan e2e 200, 나머지 5개는 MaintQ 쪽 트리거가 아직 없어 동일 payload 직접 호출로 검증). 이 검증 과정에서 assess-loan(S8)의 A2A 스키마가 실제 계약과 달랐던 것도 발견해 계약대로 재설계했습니다. 남은 건 파트너 자격증명·머신 신원(131·132, QMesh 착수 전제)이 정식 착수 전이라 지금은 M1 목업 토큰 단계인 것 하나뿐입니다(단, 이 목업 단계 자체는 실제로 동작함을 확인 — InsuQ는 고정 토큰+자기신고 파트너 ID 방식으로 이미 실사용 중).
+    <br><br><b>✅ 2026-08-24 재갱신(InsuQ 세션) — <code>effective_recovery</code> null 이슈는 InsuQ 쪽에서 해소됐습니다.</b> 원인은 시드 데이터의 <code>coinsurance_ratio</code>가 아니라 <b>InsuQ <code>CollateralVerificationService</code>가 이 필드를 아예 계산하지 않고 항상 <code>null</code>로 고정해 두고 있었던 것</b>이었습니다 — <code>claim-insurance</code>가 이미 쓰던 비례보상 공식(손해액 × coverage_amount / (insured_value × coinsurance_ratio))을 재사용해 구현했습니다. FinAllQ의 실제 <code>insuq_client.py</code> 코드를 그대로 실행해 InsuQ 프로덕션 배포판(<code>insuq-backend.onrender.com</code>)을 호출한 결과 <code>effective_recovery: 75000000.0</code>이 정상 반환됨을 확인했습니다(손계산과 일치) — S13의 남은 갭은 없습니다. 상세: InsuQ 레포 <code>docs/status_audit.html</code>.</div>
   </section>
 
   <!-- ================= ② FinAllQ 구현 현황 ================= -->
@@ -612,14 +613,14 @@
     S5:  { title:'S5 · 출금 요청 (2단 승인)', status:'done', important:false, desc:'MaintQ→FinAllQ 출금 요청. 공장 팀장 1차 승인 + 어댑터(:9101) + 은행 18칸 인가 매트릭스 2차 승인 (E2E 완료).' },
 
     S6:  { title:'S6 · 환헤지 · 자금운용 상담', status:'done', important:false, desc:'a2a_adapter의 advise-hedge 스킬로 실동작(2026-08-24) — 순수 규칙 테이블, risk_tolerance 3단계별 옵션 반환. MaintQ 쪽 트리거는 아직 미배선(동일 payload 직접 호출로 검증).' },
-    S7:  { title:'S7 · 화재보험 갱신 상담', status:'todo', important:true, desc:'공장 화재보험 갱신 시 고장이력 첨부 상담 (MaintQ→InsuQ).' },
+    S7:  { title:'S7 · 화재보험 갱신 상담', status:'progress', important:true, desc:'공장 화재보험 갱신 시 고장이력 첨부 상담 (MaintQ→InsuQ). InsuQ 쪽 advise-policy-renewal 스킬은 구현·프로덕션 배포 완료(2026-08-24 InsuQ 세션 확인) — MaintQ 쪽 발신 트리거 상태는 이 파일 범위 밖(MaintQ_시나리오맵.html 참고).' },
     S8:  { title:'S8 · 담보-보험 검증 (멀티홉)', status:'done', important:false, desc:'담보 대출 신청 시 여신 심사(Sprint 12 도메인·14 거절 이력·15 심사 근거 화면·17 여신↔이체 연결) 후 InsuQ에 담보 화재보험 유효성을 2차 홉으로 검증. a2a_adapter의 assess-loan 스킬로 실동작(2026-08-23).' },
     S9:  { title:'S9 · 처분 요청 → 법정조건 차단', status:'done', important:false, desc:'설비 매각 법적 조건 차단(판정 5종 실증) 및 해결방법 안내 (완료).' },
     S10: { title:'S10 · 근거 번들 → 서명', status:'done', important:false, desc:'매각 근거 자료 3계층 모음 및 4층 방어 사람 서명 (D90 검수 완료).' },
-    S11: { title:'S11 · 보험 목적물 변경 통지', status:'todo', important:false, desc:'설비 변동 시 보험사에 자동 통지 (MaintQ→InsuQ).' },
+    S11: { title:'S11 · 보험 목적물 변경 통지', status:'progress', important:false, desc:'설비 변동 시 보험사에 자동 통지 (MaintQ→InsuQ). InsuQ 쪽 notify-asset-change 스킬은 구현·프로덕션 배포 완료(2026-08-24 InsuQ 세션 확인) — MaintQ backend/a2a/payloads.py에 이 스킬을 부르는 발신 코드가 아직 없음(직접 grep 확인, 2026-08-24).' },
     S12: { title:'S12 · 매각대금 정산 · 대출상환', status:'done', important:false, desc:'a2a_adapter의 request-settlement 스킬로 실동작(2026-08-24) — 순수 계산(매각대금≥잔액+상환수수료 여부로 repay/hold 판정). 계약에 loan_id가 없어 FinAllQ 실제 여신 잔액엔 미반영(이월).' },
-    S13: { title:'S13 · 중고설비 취득 → 담보심사 (멀티홉)', status:'done', important:true, desc:'a2a_adapter의 assess-used-equipment-loan 스킬로 실동작(2026-08-24) — 정액법 감가상각 감정가 산출 + InsuQ verify-collateral-insurance 2차 홉 실호출까지 확인(insured_value 실수신, effective_recovery는 InsuQ 시드 데이터의 coinsurance_ratio 이슈로 아직 null — InsuQ 쪽 상태).' },
-    S14: { title:'S14 · 위험등급 변동 통지', status:'todo', important:false, desc:'설비 도입 시 공장 위험등급 변동 통지 (MaintQ→InsuQ).' },
+    S13: { title:'S13 · 중고설비 취득 → 담보심사 (멀티홉)', status:'done', important:true, desc:'a2a_adapter의 assess-used-equipment-loan 스킬로 실동작(2026-08-24) — 정액법 감가상각 감정가 산출 + InsuQ verify-collateral-insurance 2차 홉 실호출까지 확인(insured_value·effective_recovery 둘 다 실수신, 2026-08-24 InsuQ 세션에서 effective_recovery 구현 완료 + 프로덕션 배포판 상대로 검증됨 — 갭 없음).' },
+    S14: { title:'S14 · 위험등급 변동 통지', status:'progress', important:false, desc:'설비 도입 시 공장 위험등급 변동 통지 (MaintQ→InsuQ). InsuQ 쪽 notify-risk-change 스킬은 구현·프로덕션 배포·curl 6종 검증 완료(2026-08-24 InsuQ 세션) — MaintQ backend/a2a/payloads.py에 이 스킬을 부르는 발신 코드가 아직 없음(직접 grep 확인, 2026-08-24).' },
     S15: { title:'S15 · 화재멸실 → 보험금 → 과세이연 (멀티홉)', status:'done', important:true, desc:'a2a_adapter의 advise-replacement-financing 스킬(2차 홉 전용)로 실동작(2026-08-24) — tax_deferral_applicability는 원칙적으로 needs_expert_review, 조건 충족 시에만 deferred(단정 최소화). InsuQ claim-insurance와의 체인 연속성 검증은 의도적 미구현(Pool 132).' },
     S16: { title:'S16 · 설비 취득 자금조달 비교 상담', status:'done', important:false, desc:'a2a_adapter의 advise-financing 스킬로 실동작(2026-08-24) — 담보대출/리스/자기자금 옵션 비교, collateral_available=false면 담보대출 옵션 제외.' },
     S17: { title:'S17 · 법령 개정 감지 → 재서명', status:'todo', important:false, desc:'법령 개정 감지 후 사람 확인 및 룰 갱신 (check_revisions 코드 완비, v2 제외).' },
@@ -635,7 +636,7 @@
     S26: { title:'S26 · 근거 없음 → 거부', status:'done', important:false, desc:'약관에 근거가 없으면 확인 불가 거부.' },
     S27: { title:'S27 · 멀티홉 조항 추적', status:'done', important:false, desc:'조항 간 참조를 따라가는 추적 흐름.' },
     S28: { title:'S28 · 화재·재물 도메인', status:'progress', important:true, desc:'화재·재물 특약 조항 RAG 및 평가.' },
-    IA2A:{ title:'InsuQ A2A 얼굴', status:'todo', important:true, desc:'InsuQ의 A2A 창구.' },
+    IA2A:{ title:'InsuQ A2A 얼굴', status:'done', important:true, desc:'InsuQ의 A2A 창구 — backend(Spring)의 A2aController가 5개 스킬(verify-collateral-insurance·advise-policy-renewal·notify-asset-change·claim-insurance·notify-risk-change) 전부 실동작. 2026-08-24 InsuQ 세션에서 프로덕션 배포판(insuq-backend.onrender.com) 상대로도 재검증 완료 — FinAllQ의 실제 insuq_client.py 코드로 직접 호출까지 확인. (이 파일 이전 버전은 이 항목을 todo로 뒀는데, InsuQ 쪽 실제 진행도를 놓치고 있었다.)' },
     A2A: { title:'FinAllQ A2A 얼굴 (Agent Card · :9101)', status:'done', important:false, desc:'FinAllQ 요청 창구(Agent Card·:9101 어댑터)가 열려 있고 7개 선언 스킬 전부 실동작합니다(Sprint 18, 2026-08-24 완료). FinAllQ·InsuQ·MaintQ 3사 실제 크로스레포 통신까지 확인.' }
   };
 
