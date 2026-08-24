@@ -304,6 +304,13 @@ sequenceDiagram
     Router-->>Fin: 재무부 승인 완료 응답 (FinAllQ 결재 대기 상태로 안내)
 ```
 
+> **🎬 실측 캡처 (2026-08-24)** — 진단(INV-L3-02·OCT) → 발주 초안 → 팀장 승인 → 재무 승인
+> → 진단보고서·발주요청서·자금집행요청서 3종 문서가 전부 실 데이터로 렌더되는 것 확인 →
+> A2A 출금요청 전송 → `/manager/a2a` 이력에서 `ok` 상태·`CHAIN-PO-0122-b66672d7` 확인까지
+> 전 구간 라이브 캡처.
+>
+> ![request-withdrawal 실 성공 캡처](assets/maintq-finallq-withdrawal-success.gif)
+
 ### 4.2 lookup-clause — 단일 홉 조회형 (MaintQ → InsuQ)
 
 ```mermaid
@@ -325,6 +332,14 @@ sequenceDiagram
     MQ-->>Mgr: 근거 조항과 함께 답변 표시
 ```
 
+> **🎬 실측 캡처 (2026-08-24)** — 채팅 질의부터 InsuQ 실 응답(근거 조항 8건 인용, 판정
+> "판단 유보") 도착까지 라이브 캡처. 실측 응답 시간 9.7초(InsuQ RAG curl 직결 실측
+> 11.3초 — 3중 타임아웃 구조 중 에이전트 루프 전역 상한 `TOOL_TIMEOUT_SEC=10초`가
+> 병목이었고, `search_insurance_clause` 하나만 예외를 둬 해소함. 상세는 MaintQ
+> `docs/sessions/2026-08-24_시나리오1.md` §⑨).
+>
+> ![lookup-clause 실 성공 캡처](assets/maintq-insuq-lookup-clause-success.gif)
+
 ### 4.3 assess-loan — 2차 홉(멀티홉) 예시 (MaintQ → FinAllQ → InsuQ)
 
 ```mermaid
@@ -345,6 +360,13 @@ sequenceDiagram
 ```
 
 > 같은 `request_chain_id`가 1차·2차 홉 전체에 전파되어, 멀티홉 요청 하나를 끝까지 추적할 수 있게 한다.
+
+> **🎬 실측 캡처 (2026-08-24)** — 5억원 대출 신청(BLD-A, 담보 인정액 3억) → FinAllQ가
+> InsuQ에 담보 보험 확인까지 마치고 1.3초 만에 `decision: conditional`(보장 부족) 반환 →
+> `/manager/a2a`에서 `CHAIN-LOAN-a0639920 · ok` 확인. 승인 100%가 아니라 **판정 로직이
+> 실제로 동작한다**는 걸 보여주는 케이스로 골랐다(5천만원이면 무조건 approved만 나옴).
+>
+> ![assess-loan 조건부 승인 실 캡처](assets/maintq-finallq-insuq-loan-success.gif)
 
 ---
 
