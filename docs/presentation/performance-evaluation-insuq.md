@@ -95,6 +95,16 @@ LLM 생성 (Gemini 3.5 Flash)
 
 **성과:** 거부 정확도 100%, 오탐 0%
 
+> **🎬 실측 캡처 (2026-08-24)** — 방어선 ①·②가 실제 화면에서 어떻게 갈리는지 두 세션으로
+> 캡처. 위: "허리 아파서 도수치료 받는데 실비 되나요 한도 있나요" → 근거 조항 5건 인용(파트명·
+> 조·항·페이지 전부 포함) + "지급 사유에 해당할 가능성 낮음" 3단계 판정. 아래: "손해위로금도
+> 별도로 받을 수 있나요" → 코퍼스에 근거 조항이 없어 즉시 "약관에서 확인 불가" + "확인 필요·
+> 고객에게 물어보세요"로 거부(단정 없음).
+>
+> ![근거 인용 그라운딩 실 캡처](assets/insuq-qa-grounded-citation.gif)
+>
+> ![거부 게이트 실 캡처](assets/insuq-qa-refusal-gate.gif)
+
 ---
 
 ## 🔴 골든셋 태깅 문제 & 해결
@@ -195,6 +205,14 @@ LLM 생성 (Gemini 3.5 Flash)
 > 위 "backend 전체 테스트 276개→398개"도 이후 더 늘었습니다 — 2026-08-24 기준 backend 423건(+25) ·
 > ai-engine 904건(+29) · frontend vitest 114건(+37), 전부 0 failures. 최신 상태는 InsuQ 레포의
 > `docs/status_audit.html`·`docs/status.html`을 참고하세요(main 최신 커밋 `af22794`).
+
+> **🎬 실측 캡처 (2026-08-24)** — `claim-insurance`(S15)의 `requires_human_approval:true` 승인
+> 게이트를 `/pro/inbox`에서 실제로 처리하는 화면. curl로 실 스킬을 호출해 판정
+> `deferred`(손해액은 있으나 목적물 부보가액 미확인 — 근거 없이 단정하지 않고 유보)로
+> `input-required` Task를 생성한 뒤, 심사역 계정으로 로그인해 승인 확인 코멘트(전자서명)를
+> 남기고 승인 확정 → Task가 `완료`로 전이되는 것까지 라이브 캡처.
+>
+> ![claim-insurance 승인 큐 실 캡처](assets/insuq-pro-inbox-claim-approval.gif)
 
 ---
 
