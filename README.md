@@ -104,6 +104,25 @@ QMesh/
 
 > 💡 **이종 스택의 캡슐화**: 각 프로젝트의 내부 DB, 백엔드 프레임워크는 외부에 노출되지 않으며, 오직 표준화된 A2A 창구 포트로만 협업합니다.
 
+### 3-1. 실제 사용 패키지 (2026-08-24 실측 — 4개 레포 전수 확인)
+
+**A2A 통신 자체엔 전용 SDK가 없다** — 4개 레포 전부 `FastAPI`+`httpx`+`pydantic`
+(Python 3곳) 또는 Spring MVC 직접 구현(InsuQ backend `A2aController`)으로 이 레포의
+JSON Schema 계약을 손으로 구현한다. FinAllQ `backend-core`(Java)는 `pom.xml`에
+A2A·agent 관련 의존성이 0건 — `a2a_adapter`가 서비스 계정으로 기존 REST API를 그대로
+호출하는 구조라 backend-core는 A2A를 아예 인지하지 못한다.
+
+에이전트 오케스트레이션/LLM 패키지는 프로젝트마다 다르다:
+
+| 레포 | 그래프 프레임워크 | LLM SDK | 비고 |
+|---|---|---|---|
+| **MaintQ** | 없음(자체 Agent Loop) | `anthropic`(Agent API) + `google-genai`(Gemini 2.5 Flash 실사용) | `mcp>=1.28`로 도구(7~20종) 오케스트레이션, `pgvector`로 매뉴얼 검색 |
+| **InsuQ** | `langgraph>=0.2.50`(2노드) | `openai>=1.54` — NVIDIA/Gemini/Elice/OpenAI 4개 provider를 `base_url`만 바꿔 감싸는 범용 클라이언트(`generation/llm.py::PROVIDERS`) | `mcp>=1.2`, `qdrant-client[fastembed]`, `sentence-transformers`(리랭커) |
+| **FinAllQ** | `langgraph==1.2.10` | **없음** — LLM을 아예 안 씀(절대 원칙). `plan`/`synthesize` 노드가 규칙기반/템플릿이라 LLM 호출 0건 | `ai/`(FDS·스미싱 탐지)도 `scikit-learn` 고전 기법뿐, 임베딩·벡터DB 미사용 |
+
+상세 조사 근거는 `docs/session_log/2026-08-24.md` §7 참고(크로스세션으로 FinAllQ·InsuQ
+세션에 직접 확인받음).
+
 ---
 
 ## 4. 핵심 관통 원칙 & 거버넌스
