@@ -281,6 +281,23 @@ sequenceDiagram
 `Loan.status`는 그대로 `UNDER_REVIEW`로 남는다 — 최종 승인은 `/loan/review` 화면에서
 사람(ADMIN)이 별도로 눌러야 한다(자동승인 경로 없음, §⑦·§⑧ 참고).
 
+#### 홉별 요약 (시나리오 2 데모 캡처 기준)
+
+> ⚠️ **"상태" 열 표기 주의** — `assess-loan` 응답 스키마의 `status`는 `completed` 단일값뿐이고
+> (`submitted`/`working` 같은 A2A 스펙 원문의 Task 라이프사이클 상태는 이 프로젝트엔 없다),
+> MaintQ→FinAllQ→InsuQ→FinAllQ→MaintQ 전체가 **동기 호출 1왕복**이라 홉 사이에 별도로
+> 멈춰있는 중간 상태가 없다. `/manager/a2a` 화면이 실제로 쓰는 상태 어휘는
+> `ok`/`timeout`/`unavailable`/`error`(`lib/a2a.ts::a2aStatusTone`)이다.
+
+| 홉 | 주체 | 스킬 · 동작 | 결과 | 실제 상태 값 |
+|---|---|---|---|---|
+| HOP 1 | MaintQ | 상담 요청 조립 · 위임 | 요청 전송 | (호출 시작, 별도 상태 없음) |
+| HOP 2 | FinAllQ | `assess-loan` | 담보=공장 건물 → 보험 확인 필요 판단 | (동일 호출 내부, 동기) |
+| HOP 3 | InsuQ | `verify-collateral-insurance` | 보장 3억 · 요구 5억 → 부족 | `completed` |
+| HOP 4 | FinAllQ | 결과 반영 · 판정 | 조건부 승인: 보험 증액 선행 필요 | `completed` (`decision: conditional`) |
+| — | MaintQ | 회신 수신 · 표시 | "조건부 승인, 보험 3억→5억 증액 필요" | `ok` (`/manager/a2a` 표시값) |
+| — | 사람 | 심사역 최종 결재 | 여신 상태는 `UNDER_REVIEW` 유지, 자동 승인 없음 | 사람 결재 ① |
+
 ---
 
 <a id="internal"></a>
