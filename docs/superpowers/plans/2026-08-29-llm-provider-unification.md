@@ -1186,9 +1186,13 @@ Expected: PASS — 신규 8건 + 기존 `test_llm_cache.py` 전부 통과.
 
 - [ ] **Step 6: MaintQ 전체 스위트를 돌린다**
 
-Run: `cd /c/Users/ttogl/workspace/MaintQ && python -m pytest -q`
+⚠️ **정정(2026-08-29, maintq-45 지적):** 이 계획의 초안은 기대값을 "1,075건"으로 적었으나 **틀렸다.** 1,075는 **spikes 33스위트**의 건수이고 pytest는 그와 **별개의 축**이다 — 두 숫자를 섞어 쓰면 안 된다. 기준선은 MaintQ `CLAUDE.md` 「회귀 스위트」 절을 SSOT로 삼는다.
 
-Expected: 기존 기준선(1,075건, FAIL 0) 유지 + 신규분. **FAIL 0건이 아니면 커밋하지 않는다.**
+Run: MaintQ `CLAUDE.md` 「회귀 스위트」 절이 지정하는 명령. A2A 8파일군은 **`pytest-asyncio` 없이 돌리면 async 테스트가 전부 `async def functions are not natively supported`로 떨어진다** — 그 절이 지정한 러너(`uv run --with pytest-asyncio` 등)를 그대로 쓴다.
+
+Expected: 해당 절의 기준선 + 이 계획의 신규분. **FAIL 0건이 아니면 커밋하지 않는다.** 건수가 기준선과 다르면 그 차이를 설명할 수 있어야 한다(설명 못 하면 커밋하지 않는다).
+
+**spikes 축도 함께 본다:** `spikes/llm_provider_contract.py` 는 `MAINTQ_LLM_*` 환경변수를 직접 읽으므로 이 계획의 변경에 직접 노출된다. `_ENV_KEYS` 에 신규 환경변수(`MAINTQ_LLM_FALLBACK_PROVIDER`·`MAINTQ_LLM_FALLBACK_MODEL`·`NVIDIA_API_KEY`)가 빠져 있으면, `.env.example` 을 그대로 복사한 사용자 환경에서 그 스파이크가 `GeminiClient` 대신 `FallbackClient` 를 받아 FAIL 한다. 이 계획이 심는 파손이므로 같은 브랜치에서 함께 고친다.
 
 - [ ] **Step 7: `.env.example` 에 폴백 두 줄을 추가한다**
 
