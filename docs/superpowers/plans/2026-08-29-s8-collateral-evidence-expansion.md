@@ -622,7 +622,7 @@ evidence가 InsuQ TASK-H08 미해결로 실제 약관 인용이 아니라는 경
 git push origin main
 ```
 
-- [ ] **Step 5: InsuQ 쪽에 소비자 신호를 남긴다** — 2026-08-29 InsuQ 세션에 전달 완료, 해당 레포에서 처리 대기 중
+- [x] **Step 5: InsuQ 쪽에 소비자 신호를 남긴다** — 2026-08-29 완료, InsuQ 커밋 `e346882` (`docs/07_BACKLOG.md` TASK-H08)
 
 InsuQ TASK-H08은 "소비자 신호 대기 — FinAllQ가 이 필드를 실제로 쓰기 시작할 때 처리" 상태였다. 이 계획이 바로 그 신호이므로 InsuQ 레포 백로그에 기록한다.
 
