@@ -281,6 +281,29 @@ sequenceDiagram
 `Loan.status`는 그대로 `UNDER_REVIEW`로 남는다 — 최종 승인은 `/loan/review` 화면에서
 사람(ADMIN)이 별도로 눌러야 한다(자동승인 경로 없음, §⑦·§⑧ 참고).
 
+> ⚠️ **2026-08-29 계약 확장 — `evidence`를 "약관 인용"으로 표시하지 말 것.**
+> `collateral_check`가 `coverage_amount`/`sufficient` 2필드에서
+> `insured_value`·`effective_recovery`·`evidence`를 더한 **5필드**로 확장됐다
+> (`docs/schemas/assess-loan.json`, FinAllQ `a2a_adapter` 반영·테스트 완료).
+> 조건부 승인 판정에 "왜 부족한지"(보험가액 대비 비례보상)와 근거가 함께 실린다.
+>
+> 다만 `evidence`가 실어 나르는 값은 **InsuQ TASK-H08이 아직 미해결**이라
+> 실제 약관 조항 인용이 아니라 **정책 레코드 요약 문자열**이다
+> (`InsuQ_시나리오맵.html` 트랙4 표). 파이프라인만 열어둔 상태이므로
+> 데모 슬라이드·화면이 이 값을 "약관 조항 인용 첨부"로 소개하면 안 된다.
+> 2026-08-29 InsuQ 세션에 실제 인용으로의 교체를 요청해 둔 상태.
+>
+> **소비자 주의 — 부재는 `null`이 아니라 "키 없음"이다.** 어댑터가
+> `model_dump(exclude_none=True)`로 직렬화하므로, InsuQ가 안 내려준 optional은
+> JSON에서 키 자체가 사라진다. `evidence === null` 체크는 절대 걸리지 않는다 —
+> `'evidence' in collateral_check`로 판별해야 하고, **"키 없음"(InsuQ 미지원)과
+> "빈 배열"(InsuQ가 근거 없다고 답함)은 의미가 다르다**(빈 배열은 그대로 실린다).
+>
+> **필드 집합이 S13(`assess-used-equipment-loan`)과 같아졌지만 판정 규칙은 여전히
+> 다르다** — S8은 `sufficient` 하나로만 `approved`/`conditional`을 가르고, S13처럼
+> "비례보상 정보가 없으면 conditional"로 열화시키지 않는다. 이걸 지키는 회귀
+> 테스트가 FinAllQ `tests/test_mapping.py`에 있다.
+
 #### 홉별 요약 (시나리오 2 데모 캡처 기준)
 
 > ⚠️ **"상태" 열 표기 주의** — `assess-loan` 응답 스키마의 `status`는 `completed` 단일값뿐이고
