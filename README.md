@@ -116,20 +116,35 @@ A2A·agent 관련 의존성이 0건 — `a2a_adapter`가 서비스 계정으로 
 
 | 레포 | 그래프 프레임워크 | LLM SDK | 비고 |
 |---|---|---|---|
-| **MaintQ** | 없음(자체 Agent Loop) | `anthropic` + `google-genai` + `openai>=3.3.1` — 4종(`gemini`/`anthropic`/`elice`/`openai`)을 `MAINTQ_LLM_PROVIDER` 한 줄로 갈아 끼운다(`backend/agent/llm.py::PROVIDERS`). **실경로는 `openai`(`gpt-4.1-mini`)**(D122) — Gemini는 `GEMINI_API_KEY`가 비어 있어 지금은 기동 자체가 안 된다 | `mcp>=1.28`로 도구(7~20종) 오케스트레이션, `pgvector`로 매뉴얼 검색 |
-| **InsuQ** | `langgraph>=0.2.50`(2노드) | `openai>=1.54` — NVIDIA/Gemini/Elice/OpenAI 4개 provider를 `base_url`만 바꿔 감싸는 범용 클라이언트(`generation/llm.py::PROVIDERS`) | `mcp>=1.2`, `qdrant-client[fastembed]`, `sentence-transformers`(리랭커) |
+| **MaintQ** | 없음(자체 Agent Loop) | `anthropic` + `google-genai` + `openai>=3.3.1` — 5종(`gemini`/`anthropic`/`elice`/`openai`/`nvidia`)을 `MAINTQ_LLM_PROVIDER` 한 줄로 갈아 끼운다(`backend/agent/llm.py::PROVIDERS`). **기본 `nvidia`(`openai/gpt-oss-120b`, NIM 무료 티어) + `openai`(`gpt-4.1-mini`) 자동 폴백** | `mcp>=1.28`로 도구(7~20종) 오케스트레이션, `pgvector`로 매뉴얼 검색 |
+| **InsuQ** | `langgraph>=0.2.50`(2노드) | `openai>=1.54` — NVIDIA/Gemini/Elice/OpenAI 4개 provider를 `base_url`만 바꿔 감싸는 범용 클라이언트(`generation/llm.py::PROVIDERS`). **실경로는 `openai`(`gpt-4.1-mini`), 폴백 없음** | `mcp>=1.2`, `qdrant-client[fastembed]`, `sentence-transformers`(리랭커) |
 | **FinAllQ** | `langgraph==1.2.10` | **없음** — LLM을 아예 안 씀(절대 원칙). `plan`/`synthesize` 노드가 규칙기반/템플릿이라 LLM 호출 0건 | `ai/`(FDS·스미싱 탐지)도 `scikit-learn` 고전 기법뿐, 임베딩·벡터DB 미사용 |
 
 상세 조사 근거는 `docs/session_log/2026-08-24.md` §7 참고(크로스세션으로 FinAllQ·InsuQ
 세션에 직접 확인받음).
 
-> **2026-08-29 갱신** — MaintQ 행이 `google-genai`(Gemini 2.5 Flash) 실사용으로 적혀
-> 있었으나 사실이 아니었다. Elice 계정 종료로 실경로가 `openai`로 확정되면서(D122)
-> 어긋난 것이다. **표의 "LLM SDK"는 설치된 SDK와 실제 서빙 경로가 다를 수 있다** —
-> 두 시스템 모두 provider를 환경변수로 갈아 끼우는 구조이기 때문이다. 서빙 경로를
-> `nvidia`(NIM 무료 티어)로 옮기고 `openai` 자동 폴백을 두는 작업이 진행 중이며
-> (`docs/superpowers/plans/2026-08-29-llm-provider-unification.md`), 완료되면 이 표를
-> 다시 갱신한다.
+> **2026-08-29 갱신** — 표의 "LLM SDK"는 **설치된 SDK와 실제 서빙 경로가 다를 수 있다.**
+> 두 시스템 모두 provider를 환경변수로 갈아 끼우는 구조라 이 괴리가 반복해서 생긴다
+> (직전까지 MaintQ 행이 `google-genai` 실사용으로 적혀 있었으나 D122 이후 사실이
+> 아니었다). 그래서 이제 각 행에 **실경로**를 함께 적는다.
+>
+> **두 시스템이 서로 다른 모델을 쓰는 것은 타협이 아니라 실측 결과다.** 원래는 둘 다
+> NVIDIA NIM 무료 티어로 통일하려 했고(`docs/superpowers/plans/2026-08-29-llm-provider-unification.md`),
+> MaintQ는 통과했지만 InsuQ는 기각됐다:
+>
+> - **MaintQ ✅** — `openai/gpt-oss-120b`로 도구 5종을 정확한 인자로 순차 호출하고
+>   안전 블록·A2 규칙까지 유지했다. 폴백도 가짜 키 실기동으로 실증했다
+> - **InsuQ ❌** — `gpt-oss-120b`가 **`tools` 키를 생략하는 강제답변 턴**
+>   (`tool_loop.py::_final_turn`, D14a)에서 출력을 전부 추론에 쏟고 본문을 비운다
+>   (`finish_reason=stop`이라 `max_tokens`와 무관). 차점 `nemotron-3-super-120b-a12b`는
+>   게이트는 통과하나 과잉거부 0.148·되묻기 정확도 0.5로 **이미 기각된 flash-lite 수준**
+>   이다(EXP-056). 검색 지표가 3모델 동일해 차이가 생성 모델에서만 온다는 게 통제됐다
+>
+> 즉 **파이프라인 구조가 모델 적합성을 가른다** — InsuQ에는 도구를 끄고 답변을 강제하는
+> 턴과 8초 라우터·30초 레이턴시 예산이 있고 MaintQ에는 없다. 두 레포의 폴백 래퍼는
+> 각자 구현했다(InsuQ는 동기 3메서드, MaintQ는 비동기 `stream()` 하나라 코드를
+> 공유하지 않는다). InsuQ 폴백이 비어 있는 것도 의도적이다 — 유일한 대안이 게이트를
+> 통과하지 못해, 켜두면 장애 시 더 나쁜 모델로 떨어진다.
 
 ---
 
