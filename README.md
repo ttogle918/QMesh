@@ -116,12 +116,20 @@ A2A·agent 관련 의존성이 0건 — `a2a_adapter`가 서비스 계정으로 
 
 | 레포 | 그래프 프레임워크 | LLM SDK | 비고 |
 |---|---|---|---|
-| **MaintQ** | 없음(자체 Agent Loop) | `anthropic`(Agent API) + `google-genai`(Gemini 2.5 Flash 실사용) | `mcp>=1.28`로 도구(7~20종) 오케스트레이션, `pgvector`로 매뉴얼 검색 |
+| **MaintQ** | 없음(자체 Agent Loop) | `anthropic` + `google-genai` + `openai>=3.3.1` — 4종(`gemini`/`anthropic`/`elice`/`openai`)을 `MAINTQ_LLM_PROVIDER` 한 줄로 갈아 끼운다(`backend/agent/llm.py::PROVIDERS`). **실경로는 `openai`(`gpt-4.1-mini`)**(D122) — Gemini는 `GEMINI_API_KEY`가 비어 있어 지금은 기동 자체가 안 된다 | `mcp>=1.28`로 도구(7~20종) 오케스트레이션, `pgvector`로 매뉴얼 검색 |
 | **InsuQ** | `langgraph>=0.2.50`(2노드) | `openai>=1.54` — NVIDIA/Gemini/Elice/OpenAI 4개 provider를 `base_url`만 바꿔 감싸는 범용 클라이언트(`generation/llm.py::PROVIDERS`) | `mcp>=1.2`, `qdrant-client[fastembed]`, `sentence-transformers`(리랭커) |
 | **FinAllQ** | `langgraph==1.2.10` | **없음** — LLM을 아예 안 씀(절대 원칙). `plan`/`synthesize` 노드가 규칙기반/템플릿이라 LLM 호출 0건 | `ai/`(FDS·스미싱 탐지)도 `scikit-learn` 고전 기법뿐, 임베딩·벡터DB 미사용 |
 
 상세 조사 근거는 `docs/session_log/2026-08-24.md` §7 참고(크로스세션으로 FinAllQ·InsuQ
 세션에 직접 확인받음).
+
+> **2026-08-29 갱신** — MaintQ 행이 `google-genai`(Gemini 2.5 Flash) 실사용으로 적혀
+> 있었으나 사실이 아니었다. Elice 계정 종료로 실경로가 `openai`로 확정되면서(D122)
+> 어긋난 것이다. **표의 "LLM SDK"는 설치된 SDK와 실제 서빙 경로가 다를 수 있다** —
+> 두 시스템 모두 provider를 환경변수로 갈아 끼우는 구조이기 때문이다. 서빙 경로를
+> `nvidia`(NIM 무료 티어)로 옮기고 `openai` 자동 폴백을 두는 작업이 진행 중이며
+> (`docs/superpowers/plans/2026-08-29-llm-provider-unification.md`), 완료되면 이 표를
+> 다시 갱신한다.
 
 ---
 
