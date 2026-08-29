@@ -23,10 +23,17 @@
       "condition_note": { "type": "string", "description": "예: '보험 3억->5억 증액 필요'" },
       "collateral_check": {
         "type": "object",
-        "description": "InsuQ verify-collateral-insurance 2차 홉 응답을 요약해 담음",
+        "description": "InsuQ verify-collateral-insurance 2차 홉 응답을 요약해 담음. insured_value/effective_recovery/evidence는 optional — InsuQ가 내려주지 않으면 키 자체가 생략된다(하향 열화, 계약 위반 아님).",
         "properties": {
           "coverage_amount": { "type": "number" },
-          "sufficient": { "type": "boolean" }
+          "insured_value": { "type": "number", "description": "보험가액 — 비례보상(상법 674조) 계산 기준" },
+          "effective_recovery": { "type": "number", "description": "실효 회수액 = 손해액 x (보험금액/보험가액). InsuQ가 loss_amount 없이 호출되면 생략된다" },
+          "sufficient": { "type": "boolean" },
+          "evidence": {
+            "type": "array",
+            "description": "2차 홉이 반환한 인용 문자열을 그대로 전달한다. 🔴 InsuQ TASK-H08 미해결 — 현재 값은 실제 약관 조항 인용이 아니라 정책 레코드 요약 문자열이므로 화면에 '약관 조항 인용'으로 표시하면 안 된다.",
+            "items": { "type": "string", "pattern": "^.+ .+ 제\\d+조( [①-⑳\\d]+항?)?(, p\\.\\d+)?$" }
+          }
         }
       },
       "market_context": {
