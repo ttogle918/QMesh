@@ -46,7 +46,7 @@
 - Consumes: 없음 (첫 작업)
 - Produces: `assess-loan.json`의 `collateral_check`가 `coverage_amount`(number) · `insured_value`(number) · `effective_recovery`(number) · `sufficient`(boolean) · `evidence`(array of string) 5필드를 정의한다. Task 2~4가 이 필드명·타입을 그대로 쓴다.
 
-- [ ] **Step 1: 실패하는 계약 테스트를 쓴다**
+- [x] **Step 1: 실패하는 계약 테스트를 쓴다**
 
 `C:\Users\ttogl\workspace\A2A_Q\tests\contracts\__init__.py` 를 빈 파일로 만들고, `test_assess_loan_schema.py` 에 아래를 쓴다.
 
@@ -120,13 +120,13 @@ def test_decision_enum_is_unchanged(assess_loan):
     assert decision["enum"] == ["approved", "conditional", "rejected"]
 ```
 
-- [ ] **Step 2: 테스트를 돌려 실패를 확인한다**
+- [x] **Step 2: 테스트를 돌려 실패를 확인한다**
 
 Run: `cd /c/Users/ttogl/workspace/A2A_Q && python -m pytest tests/contracts/test_assess_loan_schema.py -v`
 
 Expected: FAIL — 4개 중 3개가 `KeyError: 'insured_value'` / `KeyError: 'evidence'` 로 실패하고, `test_decision_enum_is_unchanged` 만 PASS.
 
-- [ ] **Step 3: 계약 JSON을 확장한다**
+- [x] **Step 3: 계약 JSON을 확장한다**
 
 `docs/schemas/assess-loan.json` 의 `response.properties.collateral_check` 블록 전체를 아래로 교체한다. (`description` 도 2차 홉이 비례보상까지 실어온다는 사실을 반영해 갱신한다.)
 
@@ -148,19 +148,19 @@ Expected: FAIL — 4개 중 3개가 `KeyError: 'insured_value'` / `KeyError: 'ev
       },
 ```
 
-- [ ] **Step 4: 테스트를 돌려 통과를 확인한다**
+- [x] **Step 4: 테스트를 돌려 통과를 확인한다**
 
 Run: `cd /c/Users/ttogl/workspace/A2A_Q && python -m pytest tests/contracts/ -v`
 
 Expected: PASS — 4 passed.
 
-- [ ] **Step 5: 기존 테스트가 안 깨졌는지 확인한다**
+- [x] **Step 5: 기존 테스트가 안 깨졌는지 확인한다**
 
 Run: `cd /c/Users/ttogl/workspace/A2A_Q && python -m pytest -q`
 
 Expected: `89 passed` (기존 85 + 신규 4). 실패 0건.
 
-- [ ] **Step 6: 커밋**
+- [x] **Step 6: 커밋**
 
 ```bash
 cd /c/Users/ttogl/workspace/A2A_Q
@@ -187,7 +187,7 @@ evidence는 InsuQ TASK-H08 미해결 상태(정책 레코드 요약 문자열)�
 - Consumes: Task 1이 확정한 5필드 이름·타입
 - Produces: `AssessLoanCollateralCheck(coverage_amount: float|None, insured_value: float|None, effective_recovery: float|None, sufficient: bool|None, evidence: list[str]|None)` — Task 3이 이 모델에 dict를 부어 넣는다.
 
-- [ ] **Step 1: 실패하는 테스트를 쓴다**
+- [x] **Step 1: 실패하는 테스트를 쓴다**
 
 `a2a_adapter/tests/test_schemas.py` 끝에 추가한다.
 
@@ -220,13 +220,13 @@ def test_assess_loan_collateral_check_omits_absent_optionals_when_serialized():
     assert "evidence" not in dumped
 ```
 
-- [ ] **Step 2: 테스트를 돌려 실패를 확인한다**
+- [x] **Step 2: 테스트를 돌려 실패를 확인한다**
 
 Run: `cd /c/Users/ttogl/workspace/FinAllQ/a2a_adapter && python -m pytest tests/test_schemas.py -k proportional -v`
 
 Expected: FAIL — pydantic이 정의되지 않은 필드를 무시하거나(`insured_value` 접근에서 `AttributeError`) 거부한다.
 
-- [ ] **Step 3: 모델을 확장한다**
+- [x] **Step 3: 모델을 확장한다**
 
 `a2a_adapter/schemas.py:77-85` 의 `AssessLoanCollateralCheck` 클래스 전체를 아래로 교체한다.
 
@@ -256,13 +256,13 @@ class AssessLoanCollateralCheck(BaseModel):
     evidence: list[str] | None = None
 ```
 
-- [ ] **Step 4: 테스트를 돌려 통과를 확인한다**
+- [x] **Step 4: 테스트를 돌려 통과를 확인한다**
 
 Run: `cd /c/Users/ttogl/workspace/FinAllQ/a2a_adapter && python -m pytest tests/test_schemas.py -v`
 
 Expected: PASS — 신규 2건 포함 전부 통과.
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
 ```bash
 cd /c/Users/ttogl/workspace/FinAllQ
@@ -285,7 +285,7 @@ InsuQ 미지원 시 exclude_none으로 키가 생략된다(S13 CollateralCheck�
 - Consumes: Task 2의 `AssessLoanCollateralCheck` 필드 집합
 - Produces: `build_assess_loan_collateral_check(insuq_response: dict | None) -> dict` — 5키를 가진 dict를 반환한다(`insuq_response is None`이면 5키 전부 `None`). Task 4의 통합 테스트가 이 반환값을 엔드포인트 응답에서 확인한다.
 
-- [ ] **Step 1: 실패하는 테스트를 쓴다**
+- [x] **Step 1: 실패하는 테스트를 쓴다**
 
 `a2a_adapter/tests/test_mapping.py` 끝에 추가한다.
 
@@ -359,13 +359,13 @@ def test_assess_loan_decision_still_keyed_on_sufficient_only():
     assert result["condition_note"] is None
 ```
 
-- [ ] **Step 2: 테스트를 돌려 실패를 확인한다**
+- [x] **Step 2: 테스트를 돌려 실패를 확인한다**
 
 Run: `cd /c/Users/ttogl/workspace/FinAllQ/a2a_adapter && python -m pytest tests/test_mapping.py -k "proportional or degrades or not_called or keyed_on" -v`
 
 Expected: FAIL — 앞 3건이 `AssertionError`(반환 dict에 `insured_value` 키가 없음). `test_assess_loan_decision_still_keyed_on_sufficient_only`는 PASS(기존 로직이 이미 그렇게 동작).
 
-- [ ] **Step 3: 매핑 함수를 확장한다**
+- [x] **Step 3: 매핑 함수를 확장한다**
 
 `a2a_adapter/mapping.py:82-99` 의 `build_assess_loan_collateral_check` 전체를 아래로 교체한다.
 
@@ -415,13 +415,13 @@ def build_assess_loan_collateral_check(insuq_response: dict | None) -> dict:
     }
 ```
 
-- [ ] **Step 4: 테스트를 돌려 통과를 확인한다**
+- [x] **Step 4: 테스트를 돌려 통과를 확인한다**
 
 Run: `cd /c/Users/ttogl/workspace/FinAllQ/a2a_adapter && python -m pytest tests/test_mapping.py -v`
 
 Expected: PASS — 신규 4건 포함 전부 통과, 실패 0건.
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
 ```bash
 cd /c/Users/ttogl/workspace/FinAllQ
@@ -447,7 +447,7 @@ Task 2·3은 단위 레벨이다. 실제로 `POST /a2a/skills/assess-loan` 응�
 - Consumes: Task 3의 `build_assess_loan_collateral_check` 5키 반환값, Task 2의 `AssessLoanCollateralCheck`
 - Produces: 없음 (최종 검증 작업)
 
-- [ ] **Step 1: 실패하는 통합 테스트를 쓴다**
+- [x] **Step 1: 실패하는 통합 테스트를 쓴다**
 
 `a2a_adapter/tests/test_main.py` 끝에 추가한다. 기존 테스트(L457 부근 `test_...UNDER_REVIEW면 항상 InsuQ를 호출한다`)의 monkeypatch 관례를 그대로 따른다 — **작업 전에 그 테스트를 먼저 읽고 fixture/monkeypatch 이름을 이 파일의 실제 관례에 맞춰 조정할 것.**
 
@@ -532,13 +532,13 @@ def test_assess_loan_response_omits_fields_insuq_did_not_send(monkeypatch, clien
     assert check["evidence"] == []  # 빈 배열은 None이 아니라 그대로 실린다
 ```
 
-- [ ] **Step 2: 테스트를 돌려 실패를 확인한다**
+- [x] **Step 2: 테스트를 돌려 실패를 확인한다**
 
 Run: `cd /c/Users/ttogl/workspace/FinAllQ/a2a_adapter && python -m pytest tests/test_main.py -k "proportional_evidence or did_not_send" -v`
 
 Expected: 첫 번째는 `KeyError: 'insured_value'`로 FAIL. (Task 2·3이 이미 끝났다면 통과할 수도 있다 — 그 경우 이 Task는 회귀 방어용 테스트 추가로만 의미가 있고, Step 3을 건너뛴다.)
 
-- [ ] **Step 3: 실패하면 원인을 잡는다**
+- [x] **Step 3: 실패하면 원인을 잡는다**
 
 Task 2·3이 끝났는데도 실패한다면 원인은 하나뿐이다 — `main.py`가 `collateral_check`를 `AssessLoanCollateralCheck`로 감싸지 않고 raw dict를 그대로 응답에 넣거나, `model_dump(exclude_none=True)`가 아닌 다른 직렬화를 쓰고 있는 경우다. `a2a_adapter/main.py:354-355` 부근을 읽어 아래를 확인한다:
 
@@ -549,13 +549,13 @@ return map_assess_loan_response(loan_response, collateral_check)
 
 이 반환 dict가 `AssessLoanResponse`로 검증되어 `exclude_none`으로 직렬화되는 경로인지 확인하고, 아니라면 그 경로에 맞춘다. **판정 로직(`map_assess_loan_response`)은 절대 고치지 않는다.**
 
-- [ ] **Step 4: 어댑터 전체 테스트를 돌린다**
+- [x] **Step 4: 어댑터 전체 테스트를 돌린다**
 
 Run: `cd /c/Users/ttogl/workspace/FinAllQ/a2a_adapter && python -m pytest -q`
 
 Expected: 실패 0건. (변경 전 baseline 개수를 Task 2 시작 전에 기록해두고, 신규 8건만큼만 늘었는지 대조한다.)
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
 ```bash
 cd /c/Users/ttogl/workspace/FinAllQ
@@ -580,12 +580,12 @@ insured_value·effective_recovery·evidence가 실려 나가는 것과, InsuQ가
 - Consumes: Task 1의 계약 필드 집합, Task 4의 검증 결과
 - Produces: 없음 (문서화 종결)
 
-- [ ] **Step 1: §②2.3의 현재 서술을 읽는다**
+- [x] **Step 1: §②2.3의 현재 서술을 읽는다**
 
 Run: `cd /c/Users/ttogl/workspace/A2A_Q && grep -n "2.3" A2A_DIAGRAMS.md | head`
 그다음 해당 절 전체를 읽어 `collateral_check` 필드를 열거한 곳과 홉별 요약표 위치를 확인한다.
 
-- [ ] **Step 2: 계약 확장 사실을 §②2.3에 반영한다**
+- [x] **Step 2: 계약 확장 사실을 §②2.3에 반영한다**
 
 `collateral_check`가 2필드라고 적힌 서술을 5필드로 갱신하고, 절 하단에 아래 경고 블록을 추가한다.
 
@@ -605,11 +605,11 @@ Run: `cd /c/Users/ttogl/workspace/A2A_Q && grep -n "2.3" A2A_DIAGRAMS.md | head`
 > 열화시키지 않는다.
 ```
 
-- [ ] **Step 3: 문서 렌더 검증**
+- [x] **Step 3: 문서 렌더 검증**
 
 이 절에 mermaid를 새로 추가하지 않았다면 렌더 검증은 생략한다. 추가했다면 8/24 세션 방식대로 `mermaid.parse()`로 파싱 예외를 확인한다(육안 스크린샷만으로는 "Syntax error in text"를 놓친다).
 
-- [ ] **Step 4: 커밋·푸시**
+- [x] **Step 4: 커밋·푸시**
 
 ```bash
 cd /c/Users/ttogl/workspace/A2A_Q
@@ -622,7 +622,7 @@ evidence가 InsuQ TASK-H08 미해결로 실제 약관 인용이 아니라는 경
 git push origin main
 ```
 
-- [ ] **Step 5: InsuQ 쪽에 소비자 신호를 남긴다**
+- [ ] **Step 5: InsuQ 쪽에 소비자 신호를 남긴다** — 2026-08-29 InsuQ 세션에 전달 완료, 해당 레포에서 처리 대기 중
 
 InsuQ TASK-H08은 "소비자 신호 대기 — FinAllQ가 이 필드를 실제로 쓰기 시작할 때 처리" 상태였다. 이 계획이 바로 그 신호이므로 InsuQ 레포 백로그에 기록한다.
 
