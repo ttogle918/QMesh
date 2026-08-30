@@ -183,6 +183,22 @@ A2A 경로로 우회된다. `assess-loan`이 `conditional`을 받아도 대출�
 **아무것도 쓰지 않는다.** 플래그는 그대로 남고 결정도 그대로 막혀 있다. 응답의
 `remaining_balance`·`action`은 trace에만 남긴다.
 
+### ⚠️ 이 스킬은 판정만 한다 — FinAllQ 장부를 갱신하지 않는다
+
+FinAllQ `decide_settlement()`는 **외부 호출·DB 조회가 0인 순수 함수**다(TASK-195의
+명시적 설계 판정). 계약에 `loan_id`가 없어 어느 여신 레코드를 갱신할지 특정할 방법이
+애초에 없기 때문이다. 따라서 응답의 `remaining_balance`는 **산술 결과이지 FinAllQ
+장부에 반영된 잔액이 아니다.**
+
+이것은 결함이 아니라 `assess-loan`(S8)과 같은 성격이다 — S8도 `conditional` 판정을
+내리지만 대출을 실행하지 않는다(FinAllQ `mapping.py`의 "자동 승인 경로 없음"). **다만
+모르고 쓰면 "정산이 끝났다"고 오해할 수 있으므로 여기 적어 둔다.** MaintQ는
+`lien_released`만 소비하고 `remaining_balance`는 trace에만 남긴다.
+
+FinAllQ Pool 200에 이 갭(`loan_id` 부재로 여신 잔액 미반영, 음수 `remaining_balance`
+경계)이 이미 등재돼 있고 "A2A_Q 계약 갱신 협의 선행 필요"로 표시돼 있다. **이 설계의
+범위 밖이다** — 수신부 계약 구조를 바꾸는 일이라 별도 사이클로 다룬다.
+
 ---
 
 ## 공통 구조 — 새 인프라는 만들지 않는다
@@ -251,6 +267,12 @@ routers/a2a.py 엔드포인트
   기반이 유력하나, 이 필드는 원래 "금융기관 동의서 문서 참조"를 담는 자리라 A2A 정산
   참조를 넣는 것이 의미상 맞는지 구현 시 한 번 더 판단한다. 최소 요건은 **비어 있지
   않을 것**과 **나중에 출처를 되짚을 수 있을 것** 두 가지다
-- **FinAllQ 수신부가 draft 결정의 `decision_id`를 받아들이는지 확인되지 않았다.**
-  FinAllQ는 구현·curl 검증을 마쳤다고 했으나 `decision_id`의 서명 여부를 검사하는지는
-  모른다. 구현 전에 FinAllQ 세션에 확인한다 — 검사한다면 계약 해석을 맞춰야 한다
+~~FinAllQ 수신부가 draft 결정의 `decision_id`를 받아들이는지~~ → **2026-08-30 해소.**
+FinAllQ 세션 확인 결과 받아들인다. 단 **"허용하기로 결정해서가 아니라 검사할 수단이
+없어서"**다 — `decision_id` 사용처가 `a2a_adapter/schemas.py:235`의 pydantic 필드 선언
+한 줄뿐이고 `decide_settlement()`에 인자로 전달조차 되지 않는다. `approved_by` 해석도
+양쪽이 일치했다(정산 요청 승인자, 수신부는 검증·echo 하지 않음).
+
+그 구분이 중요해서 **계약에 명시했다**(A2A_Q `9d7cf91`) — 나중에 누군가 "`decision_id`는
+서명된 결정을 가리킨다"고 가정하고 검증을 추가하면 이 순환이 조용히 깨진다. 구조는
+바꾸지 않고 `description`만 추가했으므로 FinAllQ pydantic 모델은 영향받지 않는다.
