@@ -3,7 +3,12 @@
 > **문서 버전**: v1.5 (`lookup-clause` Spring 이관 + S8 `collateral_check` 5필드 확장 반영)
 > **기준 시점**: 2026-08-30
 
-> 🆕 **v1.5 갱신 (2026-08-30)** — 한 가지 구조 변경이 있었다.
+> 🆕 **v1.5 갱신 (2026-08-30)** — 두 가지 구조 변경이 있었다.
+>
+> - **MaintQ 발신 트리거가 3종 → 5종이 됐다.** `assess-used-equipment-loan`(S13)·
+>   `request-settlement`(S12) 추가. **S12는 응답이 MaintQ 자신의 처분 블로커
+>   (LIEN-CONSENT)를 푸는 첫 발신 스킬이다** — 단, 담보만 풀고 **서명은 사람이 한다**.
+>   나머지 3종(S6·S16·S15)은 **"미착수"가 아니라 "데이터 없음"으로 닫혔다.** 아래 §⑦ 참고.
 >
 > - **`lookup-clause` 수신부가 InsuQ 포크 어댑터(`:9102`) → Spring(`:8081`)으로 이관됐다.**
 >   `InsuQ/a2a_adapter/`는 삭제됐고 `docker-compose.yml`의 서비스 정의도 함께 제거됐다.
@@ -132,10 +137,10 @@ flowchart TD
         I["약관검색·정책원장·청구"]
     end
 
-    M -- "S5 request-withdrawal (✅ 실측 동작, 3단 승인 반영·GIF 캡처)<br>S8 assess-loan (✅ 실측 동작, GIF 캡처)<br>S6·S12·S13·S16 (FinAllQ 수신부 완료·MaintQ 발신 미착수)" --> F
+    M -- "S5 request-withdrawal (✅ 실측 동작, 3단 승인 반영·GIF 캡처)<br>S8 assess-loan (✅ 실측 동작, GIF 캡처)<br>S12 request-settlement · S13 assess-used-equipment-loan (🆕 v1.5 발신 구현)<br>S6·S16 (수신부 완료 · MaintQ 발신 만들지 않음 — 데이터 없음)" --> F
     M -- "S7·S11·S14 (InsuQ 수신부 완료·MaintQ 발신 미착수)<br>lookup-clause (✅ 실측 동작, GIF 캡처 — Spring :8081 수신부, 2026-08-30 이관)" --> I
     F -- "S8·S13 verify-collateral-insurance (✅ 실측 동작 — InsuQ 2차 홉 구현 완료)" --> I
-    I -- "S15 claim-insurance→advise-replacement-financing (FinAllQ 수신부 완료·MaintQ 발신 미착수)" --> F
+    I -- "S15 claim-insurance→advise-replacement-financing (FinAllQ 수신부 완료 · MaintQ 발신 만들지 않음 — claim-insurance 발신 흐름 자체가 없어 사실상 두 스킬 작업)" --> F
 ```
 
 > **MaintQ는 A2A 스킬을 노출하지 않는다** — 항상 요청을 시작하는 client다
@@ -527,27 +532,55 @@ sequenceDiagram
 적었던 건 틀린 진단이었다 — 진짜 원인은 InsuQ 미구현이었고 이제 InsuQ 자체 포크
 어댑터로 해소됐다(§②2.1). `request-withdrawal`은 D119로 MaintQ 내부에 재무부 승인
 단계가 하나 더 생겨 총 3단 승인 구조가 됐고(§②2.2), `assess-loan`은 FinAllQ Sprint 18의
-계약 재작성 + InsuQ 2차 홉으로 조건부 승인까지 실측했다(§②2.3). **단, MaintQ 쪽
-발신 트리거는 여전히 이 3종뿐이다** — FinAllQ가 나머지 5개 스킬 수신부를 전부
-구현했어도(아래 표) MaintQ가 호출하지 않으면 그림의 떡이다. 자동화 테스트도 이미
-충분히 갖춰져 있다(86/86 pytest + 다수 스파이크).
+계약 재작성 + InsuQ 2차 홉으로 조건부 승인까지 실측했다(§②2.3).
 
-### 신규 — FinAllQ 추가 5스킬 (2026-08-24, MaintQ 발신 트리거 미착수)
+> 🆕 **v1.5 갱신(2026-08-30) — MaintQ 발신 트리거가 3종 → 5종이 됐다.**
+> `assess-used-equipment-loan`(S13)·`request-settlement`(S12)이 추가됐다.
+> **나머지 3종은 "미착수"가 아니라 "데이터 없음"으로 닫혔다**(아래 표).
 
-FinAllQ가 아래 5개 스킬의 요청/응답 계약을 확정하고 자기 쪽 수신 처리(inbound)를
-구현·curl 검증까지 마쳐 MaintQ 쪽에 공유했다(Sprint 18, §① 참고). **MaintQ 쪽 발신
-트리거(payload 빌더 + 라우터)는 아직 하나도 없다** — 이번 시연 범위가
-`request-withdrawal`·`assess-loan`·`lookup-clause` 세 개로 확정돼 있어(🆕 v1.4:
-`lookup-clause`가 InsuQ 측 해소로 시연 범위에 합류, §②2.1) 나머지는 시연 이후로
-미뤄 둔 상태다(MaintQ `docs/07_BACKLOG.md` P34).
+### FinAllQ 추가 5스킬 — 2종 구현, 3종은 만들지 않는다 (v1.5, 2026-08-30)
 
-| 스킬 | 시나리오(A2A_Q 번호) | FinAllQ 쪽 상태 | MaintQ 쪽 상태 |
+FinAllQ는 5개 스킬 수신부를 Sprint 18에 전부 구현·curl 검증했다. MaintQ 발신부는
+**각 스킬의 필수 입력을 MaintQ가 실제로 채울 수 있는지를 `data/seed.py` 스키마로
+대조해** 2종만 만들었다. 나머지 3종을 만들려면 없는 데이터를 지어내야 하는데, 이
+프로젝트는 그러지 않는 것을 원칙으로 삼아 왔다(D62 NULL=모름 · D74 실측 아니면 NULL ·
+D76 구조 모르면 나열만). **스킬 개수를 늘리려고 그 원칙을 깨지 않는다.**
+
+| 스킬 | 시나리오 | FinAllQ 수신부 | MaintQ 발신부 |
 |---|---|---|---|
-| `advise-hedge` | S6 | ✅ 구현·curl 검증 완료 | 🔴 발신 트리거 미착수(시연 이후 예정) |
-| `advise-financing` | S16 | ✅ 구현·curl 검증 완료 | 🔴 발신 트리거 미착수(시연 이후 예정) |
-| `request-settlement` | S12 | ✅ 구현·curl 검증 완료 | 🔴 발신 트리거 미착수(시연 이후 예정) |
-| `assess-used-equipment-loan` | S13 | ✅ 구현·curl 검증 완료 | 🔴 발신 트리거 미착수(시연 이후 예정) |
-| `advise-replacement-financing` | S15(2차 홉 전용 — InsuQ `claim-insurance` 이후에만 호출) | ✅ 구현·curl 검증 완료 | 🔴 발신 트리거 미착수(시연 이후 예정) — MaintQ에 `claim-insurance` 호출 흐름 자체가 있는지도 확인 필요 |
+| `assess-used-equipment-loan` | S13 | ✅ | ✅ **구현(2026-08-30)** — `assets`에서 `building_id`·`acquired_at`·점검일 3종 + `ownership_checks`를 파생 |
+| `request-settlement` | S12 | ✅ | ✅ **구현(2026-08-30)** — **응답이 MaintQ 상태를 바꾸는 첫 발신 스킬**(아래) |
+| `advise-hedge` | S6 | ✅ | ⚪ **만들지 않음 — 통화·외화 데이터 0건**(`seed.py` 전체에 `currency`/`USD`/`환율` 매치 없음). 만들려면 공급사에 통화 컬럼을 신설하고 환노출을 지어내야 한다 |
+| `advise-financing` | S16 | ✅ | ⚪ **만들지 않음 — 트리거가 될 도메인 이벤트가 없다** |
+| `advise-replacement-financing` | S15(2차 홉 전용) | ✅ | ⚪ **만들지 않음 — `claim-insurance` 발신 흐름 자체가 없다.** 사실상 두 스킬 작업이라 별도 사이클 |
+
+#### S12가 특별한 이유 — 응답이 MaintQ 자신의 블로커를 푼다
+
+기존 발신 4종은 조회하거나(`lookup-clause`·`assess-loan`) 남의 시스템을 움직였을 뿐
+(`request-withdrawal`) 자기 상태를 바꾸지 않았다. S12는 다르다:
+
+```
+draft DISPOSAL 결정 (LIEN-CONSENT[BLOCKING]로 서명 불가)
+  → request-settlement 발신 (decision_id = 그 draft)
+  → lien_released: true  →  assets.lien_consent_ref 기록
+  → 재산출 시 LIEN-CONSENT 미발화 → 서명 경로 열림
+  → ★ 서명은 사람이 한다
+```
+
+이 스킬은 `data/rules/rules/LIEN-CONSENT.json`의 `resolve_options[1]`("대출 상환 후
+근저당 말소")을 그대로 자동화한 것이다. **`decision_id`가 미서명 draft를 가리키는 것이
+정상 경로다** — 담보를 푸는 수단이 이 스킬 자신이라 정산 요청이 서명보다 먼저
+일어나야 한다(계약 `request-settlement.json`의 `decision_id` 설명에 명시).
+
+🔴 **지켜진 불변식:** `lien_released: true`여도 **결정을 자동 서명하지 않는다.**
+`spikes/disposal_sign_contract`가 27조합 전수에서 **26/26 그대로**인 것이 "A2A 경로로
+서명 불변식이 뚫리지 않았다"는 독립 증거다(BLOCKING 우회 0건 · 서명 없는 확정 0건).
+`seed.py` 검사 ⑱(담보 자산 동의서 공백 표기 0건)도 통과 — `lien_consent_ref`에 빈
+문자열을 쓰면 `is_null`이 False가 되어 BLOCKING 룰이 조용히 미발화한다.
+
+⚠️ **S12는 판정만 한다** — FinAllQ `decide_settlement()`는 DB 조회 0인 순수 함수라
+(`loan_id` 부재, TASK-195) `remaining_balance`는 산술 결과이지 장부 반영 잔액이 아니다.
+MaintQ는 `lien_released`만 소비하고 나머지는 trace에만 남긴다.
 
 ---
 
