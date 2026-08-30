@@ -1,7 +1,20 @@
 # Q 시리즈 (MaintQ · FinAllQ · InsuQ) A2A 통합 다이어그램 명세서
 
-> **문서 버전**: v1.4 (MaintQ D119·D120 + FinAllQ Sprint 18 + 실측 GIF 캡처 반영)
-> **기준 시점**: 2026-08-24
+> **문서 버전**: v1.5 (`lookup-clause` Spring 이관 + S8 `collateral_check` 5필드 확장 반영)
+> **기준 시점**: 2026-08-30
+
+> 🆕 **v1.5 갱신 (2026-08-30)** — 한 가지 구조 변경이 있었다.
+>
+> - **`lookup-clause` 수신부가 InsuQ 포크 어댑터(`:9102`) → Spring(`:8081`)으로 이관됐다.**
+>   `InsuQ/a2a_adapter/`는 삭제됐고 `docker-compose.yml`의 서비스 정의도 함께 제거됐다.
+>   이로써 **Agent Card가 한 곳에서만 서빙**되며, 두 서버가 같은 6스킬을 중복 선언하던
+>   상태(구 InsuQ TASK-H09)가 끝났다. 실측 HTTP 200(12.1초), 인용 9건 전부 계약 정규식
+>   통과, 미인가 403 · 잘못된 토큰 401. 아래 §②2.1·§④가 이 구조로 갱신됐다.
+> - 🔴 **그 이관이 인가 공백을 드러냈다** — `lookup-clause`는 어느 `allowed_skills`에도
+>   없었고, 포크 어댑터에 인증·인가 계층이 **아예 없어서** 통과하고 있었다. **단위·통합
+>   테스트로는 드러나지 않는 종류의 공백이다**(테스트가 시드 grant를 자체로 넣는다).
+> - **MaintQ 후속 한 줄이 남아 있다** — `MAINTQ_A2A_INSUQ_BASE_URL` 기본값이 아직 `:9102`다.
+>   환경변수 오버라이드로 코드 수정 없이도 동작한다.
 
 > 🆕 **v1.4 정정 (2026-08-24, MaintQ 세션 후속 반영)** — v1.3 이후 세 레포에서 동시에 진행된
 > 변경을 이 문서에 소급 반영한다. 근거는 `docs/presentation/a2a-contract-and-data-flow.md`
@@ -120,7 +133,7 @@ flowchart TD
     end
 
     M -- "S5 request-withdrawal (✅ 실측 동작, 3단 승인 반영·GIF 캡처)<br>S8 assess-loan (✅ 실측 동작, GIF 캡처)<br>S6·S12·S13·S16 (FinAllQ 수신부 완료·MaintQ 발신 미착수)" --> F
-    M -- "S7·S11·S14 (InsuQ 수신부 완료·MaintQ 발신 미착수)<br>lookup-clause (✅ 실측 동작, GIF 캡처 — InsuQ 자체 포크 어댑터 경유)" --> I
+    M -- "S7·S11·S14 (InsuQ 수신부 완료·MaintQ 발신 미착수)<br>lookup-clause (✅ 실측 동작, GIF 캡처 — Spring :8081 수신부, 2026-08-30 이관)" --> I
     F -- "S8·S13 verify-collateral-insurance (✅ 실측 동작 — InsuQ 2차 홉 구현 완료)" --> I
     I -- "S15 claim-insurance→advise-replacement-financing (FinAllQ 수신부 완료·MaintQ 발신 미착수)" --> F
 ```
@@ -144,16 +157,27 @@ flowchart TD
 <a id="sequence"></a>
 ## ② A2A 시퀀스 다이어그램
 
-### 2.1 lookup-clause — ✅ 실측 동작, GIF 캡처 완료 (MaintQ → InsuQ 자체 포크 어댑터)
+### 2.1 lookup-clause — ✅ 실측 동작, GIF 캡처 완료 (MaintQ → InsuQ Spring 수신부)
 
-> 🆕 **정정(2026-08-24)** — 이 절은 v1.0~v1.3 내내 "MaintQ 쪽 서비스 자격증명 미설정으로
-> 차단"이라고 적었다. **그 서술은 틀렸다.** 진짜 원인은 **InsuQ가 스킬 자체를 미구현
-> (501 고정)**한 것이었다. 이제 InsuQ가 이 스킬을 **자기 레포 안에 별도로 포크한 어댑터**
-> (`InsuQ/a2a_adapter/`, import 경로 `a2a_adapter.*` — 이 레포 `adapters/insuq_a2a/` 원본과는
-> 별개 사본)로 실제 서빙한다. Basic 인증 목업도 아니다 — 실제 필터는 D120이 밝힌 대로
-> `Authorization: Bearer <token>` + `X-A2A-Partner-Id`를 검사하지만, **이 포크 어댑터엔 그
-> 필터 자체가 없어** 아직 실전 검증되지 않았다. 채팅 질의부터 InsuQ 응답(근거 조항 8건,
-> 판정 "판단 유보")까지 실측 9.7초, 라이브 캡처는 §⑧ 참고.
+> 🆕 **갱신(2026-08-30) — 포크 어댑터가 사라졌다.** InsuQ가 이 스킬을 Spring
+> `A2aController`(`:8081`)로 이관하고 `InsuQ/a2a_adapter/`를 **삭제**했다(TASK-H09 해소).
+> 이로써 Agent Card가 **한 곳에서만** 서빙되고, 두 서버가 같은 6스킬을 중복 선언하던
+> 상태가 끝났다. 실측: `POST /a2a/skills/lookup-clause` → **HTTP 200(12.1초)**, 인용 9건
+> 전부 계약 정규식 통과, 미인가 파트너 **403** · 잘못된 토큰 **401**.
+>
+> 🔴 **이관으로 드러난 인가 공백** — `lookup-clause`는 **어느 `allowed_skills`에도 없었다.**
+> 포크 어댑터에 인증·인가 계층이 **아예 없어서**(그 compose 주석이 스스로 "Bearer·
+> X-A2A-Partner-Id 미검증, 외부 공개 금지"라고 적고 있었다) grant 없이 돌던 것이다.
+> Spring으로 오면서 `ServiceTokenFilter`가 403으로 막게 되어 InsuQ가 grant 마이그레이션을
+> 신설했다 — **권한 확대가 아니라 이관 전 접근을 유지하는 변경이다.** 단위·통합 테스트는
+> 시드 grant를 자체로 넣으므로 **실기동 전에는 드러나지 않는 종류의 공백이었다.**
+>
+> 🆕 **정정(2026-08-24, 이력 보존)** — 이 절은 v1.0~v1.3 내내 "MaintQ 쪽 서비스 자격증명
+> 미설정으로 차단"이라고 적었다. **그 서술은 틀렸다.** 진짜 원인은 **InsuQ가 스킬 자체를
+> 미구현(501 고정)**한 것이었고, 2026-08-24에 포크 어댑터(`:9102`)로 우회 해소했다가
+> 2026-08-30에 위와 같이 Spring으로 정리됐다. 아래 다이어그램·GIF는 **응답 JSON 모양이
+> 동일**해(같은 `status`/`evidence`/`answer` 필드, 같은 인용 포맷터 규약) 그대로 유효하다 —
+> 바뀐 것은 포트와 인가 계층뿐이다.
 
 ```mermaid
 sequenceDiagram
@@ -161,12 +185,13 @@ sequenceDiagram
     actor Mgr as 정비사/관리자
     participant MQ as MaintQ Backend (:8000)<br>POST /api/a2a/lookup-clause
     participant Client as backend/a2a/client.py<br>call_skill()
-    participant IQ as InsuQ 자체 포크 어댑터 (:9102)<br>POST /a2a/skills/lookup-clause<br>(InsuQ/a2a_adapter/, 인증 필터 없음)
+    participant IQ as InsuQ backend Spring (:8081)<br>POST /a2a/skills/lookup-clause<br>(A2aController + ServiceTokenFilter)
     participant AI as InsuQ ai-engine (:8000)<br>POST /qa
 
     Mgr->>MQ: "인버터 과전압 손해 약관 보장 여부?"
     MQ->>Client: build_lookup_clause_payload() 조립 후 호출
     Client->>IQ: POST /a2a/skills/lookup-clause<br>(X-Request-Chain-Id, Authorization: Bearer + X-A2A-Partner-Id — D120)
+    IQ->>IQ: ServiceTokenFilter — 토큰·파트너·allowed_skills 검사<br>(미인가 403 / 잘못된 토큰 401)
     IQ->>AI: POST /qa (question 매핑)
     AI-->>IQ: QaResponse (answer, verdict, evidence)
     IQ-->>Client: 200 {status: completed, evidence: [...]}
@@ -175,10 +200,15 @@ sequenceDiagram
     MQ-->>Mgr: 근거 조항과 함께 답변 표시
 ```
 
-이 경로는 **끝단까지 실제로 연결돼 있고, 실측으로 200을 받았다.** 다만 InsuQ 쪽 "정식"
-수신부로 설계됐던 Spring `:8081`(`A2aController`)은 이 스킬에 한해 여전히 501이고, 지금
-실제로 응답하는 건 위 포크 어댑터(`:9102`)다 — 이게 임시 경로인지 최종 경로인지는 InsuQ
-쪽 결정이 남아있다(`InsuQ/docs/07_BACKLOG.md` H9, §④ 참고).
+이 경로는 **끝단까지 실제로 연결돼 있고, 실측으로 200을 받았다.** 2026-08-30 이관으로
+"임시 경로인지 최종 경로인지"라는 미결(구 `InsuQ/docs/07_BACKLOG.md` H9)이 닫혔다 —
+**수신부는 Spring `:8081` 하나다.** `:9102`는 더 이상 존재하지 않으며, InsuQ
+`docker-compose.yml`의 `a2a-adapter` 서비스 정의도 함께 제거됐다(백로그가 "compose에 안
+묶여 있다"고 적고 있었으나 **사실이 아니었다** — 확인 없이 지웠으면 compose가 깨졌다).
+
+⚠️ **MaintQ 쪽 후속 한 줄이 남아 있다** — `backend/routers/a2a.py`의
+`MAINTQ_A2A_INSUQ_BASE_URL` 기본값이 아직 `:9102`다. 환경변수 오버라이드가 있어
+`MAINTQ_A2A_INSUQ_BASE_URL=http://localhost:8081`만 주면 코드 수정 전에도 동작한다.
 
 ### 2.2 request-withdrawal — ✅ 실측 동작, GIF 캡처 완료 (3단 승인 반영, D119)
 
@@ -357,13 +387,8 @@ graph TD
         FA_CORE["backend-core (Spring)<br>:8082 (🆕 실측 정정, v1.4)"]
     end
 
-    subgraph INSUQ_FORK ["InsuQ 레포 내 포크 (A2A_Q 원본과 별도 사본, 🆕 v1.4)"]
-        INSUQ_FORK_ADAPTER["InsuQ/a2a_adapter/<br>lookup-clause만 남김<br>(verify-collateral-insurance·claim-insurance는 Spring이 흡수해 제거)"]
-    end
-
-    MQ_A2A -- "HTTP (lookup-clause ✅ 실측 동작 — 실제로는 아래 포크 경유)" --> INSUQ_ADAPTER
-    INSUQ_ADAPTER -.->|"같은 Agent Card 중복 선언 (InsuQ 07_BACKLOG.md H9, 정리 필요)"| INSUQ_FORK_ADAPTER
-    INSUQ_FORK_ADAPTER -- "HTTP" --> INSUQ_AI
+    MQ_A2A -- "HTTP (lookup-clause ✅ 실측 동작 — 🆕 v1.5 Spring 수신부로 이관)" --> INSUQ_SPRING
+    INSUQ_SPRING -- "HTTP (lookup-clause → /qa)" --> INSUQ_AI
     MQ_A2A -- "HTTP (request-withdrawal·assess-loan ✅ E2E 성공, GIF 캡처)" --> FINALLQ_ADAPTER
     INSUQ_ADAPTER -- "HTTP (원본, 실제 트래픽 없음)" --> INSUQ_AI
     FINALLQ_ADAPTER -- "서비스 계정 로그인 + HTTP" --> FA_CORE
@@ -475,7 +500,7 @@ sequenceDiagram
         AuthHdr-->>Caller: {} (헤더 없음)
     end
     Caller->>Adapter: POST .../a2a/skills/{id}
-    Note over Adapter: InsuQ ServiceTokenFilter·FinAllQ 실 필터는 이 스킴을 검사한다.<br>단, lookup-clause가 실제로 동작하는 InsuQ 자체 포크 어댑터(:9102, §②2.1·§④)는<br>이 필터 자체가 없어 헤더 검증이 아직 실전 검증되지 않았다.
+    Note over Adapter: InsuQ ServiceTokenFilter·FinAllQ 실 필터는 이 스킴을 검사한다.<br>🆕 v1.5 — lookup-clause가 Spring(:8081)으로 이관되며 이 필터를 실제로 타게 됐고,<br>미인가 파트너 403 · 잘못된 토큰 401을 실측했다(§②2.1). 헤더 검증이 실전 검증됐다.
 ```
 
 ---
