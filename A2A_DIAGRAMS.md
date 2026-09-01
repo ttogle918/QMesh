@@ -1,7 +1,21 @@
 # Q 시리즈 (MaintQ · FinAllQ · InsuQ) A2A 통합 다이어그램 명세서
 
-> **문서 버전**: v1.5 (`lookup-clause` Spring 이관 + S8 `collateral_check` 5필드 확장 반영)
-> **기준 시점**: 2026-08-30
+> **문서 버전**: v1.6 (데모 GIF 5종 전면 재촬영 — S12·S13 발신 구현 이후 첫 캡처)
+> **기준 시점**: 2026-09-01
+
+> 🆕 **v1.6 갱신 (2026-09-01)** — §⑧ 데모 캡처를 **5종으로 전면 재촬영**했다. 구 3종은
+> 「구 캡처」로 남겼다(대체이지 삭제가 아니다). 새로 추가된 것은 **02b**(A2A 요청이 상대 회사
+> 직원 화면에 뜨는 컷)와 **04**(S12 — 상대의 답이 내 시스템의 처분 차단을 푸는 컷)다.
+>
+> 🔴 **촬영이 실동작 결함 3건을 드러냈다. 셋 다 API 검증만으로는 보이지 않는 종류다:**
+> 1. MaintQ `.env`가 `MAINTQ_A2A_INSUQ_BASE_URL`을 `:9102`로 고정해, v1.5에서 고친 코드
+>    기본값(`:8081`)이 **한 번도 효과를 낸 적이 없었다**
+> 2. MaintQ MCP 도구 `search_insurance_clause`가 자기 백엔드를 `:8000`으로 호출하는데
+>    백엔드를 옮기자 **자기 자신에게 못 닿았다**(`WinError 10061` — InsuQ 장애로 오진하기 쉽다)
+> 3. **FinAllQ `infra/.env`의 `INSUQ_SERVICE_TOKEN`이 낡아**(32자, InsuQ `A2A_MOCK_TOKEN`은
+>    44자) `assess-loan` **2차 홉이 401 → FinAllQ가 502로 감싸 반환**. `request-withdrawal`·
+>    `request-settlement`는 2차 홉이 없어 200이었다 — **`assess-loan`만 502**인 것이 단서였다.
+>    FinAllQ 레포 미수정(2026-09-01 기준)
 
 > 🆕 **v1.5 갱신 (2026-08-30)** — 두 가지 구조 변경이 있었다.
 >
@@ -593,11 +607,33 @@ MaintQ는 `lien_released`만 소비하고 나머지는 trace에만 남긴다.
 
 ### 실측 GIF 캡처 (`docs/presentation/assets/`)
 
+> 🆕 **v1.6 전면 재촬영 (2026-08-31 ~ 09-01).** 화면 변화마다 프레임을 잡고 펼침 섹션·드롭다운을
+> 전부 열어 다시 찍었다. **S12·S13 발신 구현 이후 첫 캡처**이며, 상대 시스템 도착 화면(02b)이
+> 새로 추가됐다. 구 3종은 아래 「구 캡처」에 남긴다 — 지운 것이 아니라 대체된 것이다.
+
 | 파일 | 시나리오 | 내용 |
 |---|---|---|
-| `maintq-finallq-withdrawal-success.gif` | S5 request-withdrawal | 진단→발주 초안→팀장 승인→재무 승인→문서 3종 렌더→A2A 전송→`/manager/a2a`에서 `CHAIN-PO-0122-b66672d7 · ok` 확인까지 전 구간 |
-| `maintq-insuq-lookup-clause-success.gif` | lookup-clause | 채팅 질의부터 InsuQ 실 응답(근거 조항 8건, 판정 "판단 유보") 도착까지, 실측 9.7초 |
-| `maintq-finallq-insuq-loan-success.gif` | S8 assess-loan (2차 홉) | 5억원 대출 신청(담보 BLD-A, 담보 인정액 3억)→InsuQ 2차 홉 조회→1.3초 만에 `decision: conditional`(보장 부족)→`/manager/a2a`에서 `CHAIN-LOAN-a0639920 · ok` 확인 |
+| `01-maintq-insuq-lookup-clause.gif` | lookup-clause | 장비 드롭다운 펼침 → 질의 → **실행 로그에 `search_insurance_clause` pending → 완료** → 판정 "판단 유보" · 근거 8건(페이지 번호 포함) · **9.4s** → 우측 탭 3종 전환. 에이전트가 선택 장비를 반영해 질문을 다듬는 것(`"iG5A 인버터가 화재로 파손될 경우…"`)이 로그에 보인다 |
+| `02-maintq-finallq-request-withdrawal.gif` | S5 request-withdrawal | 승인 큐 → PO 선택 → **펼침 3종 전부 열람**(진단 보고서·발주 요청서·자금집행 요청서) → 팀장 승인 → **신원 전환**(정비팀장→재무담당) → 재무 승인 → 문서의 「A2A 위임 전송」이 **아니오 → 예**, 대상 시스템 **확인되지 않음 → FinAllQ**, 직무분리(SoD)가 **확인 전 → 통과**로 바뀐다 |
+| `02b-finallq-approval-inbox-a2a-arrival.gif` | S5 — **상대 화면** | FinAllQ `/transfers/approvals` 결재함. 요청자 `a2a-service@finallq.example` · 76,000원 · `****8103` · **메모에 MaintQ 진단 근거가 그대로**(`iG5A OHt 과열 진단, 냉각팬 고장 유력 (매뉴얼 p.202). 재고 1/안전재고 3 미달`). **A2A 요청이 상대 회사 직원 화면에 실제로 뜨는 것을 보여주는 유일한 컷** |
+| `03-maintq-finallq-insuq-assess-loan.gif` | S8 assess-loan (2차 홉) | 채팅 → `assess_equipment_loan` → **8.5s** → `decision: approved` · `collateral_check`에 **`insured_value` 5억 · `evidence`**(2026-08-29 S8 계약 확장분이 실제로 실려 온다) |
+| `04-maintq-finallq-request-settlement.gif` | **S12 request-settlement** | 자산 목록 → 처분 사전판정 **`BLOCKED` HTTP 409**(차단 1건 `LIEN-CONSENT`, 근거 `has_lien=True, lien_consent_ref=None`) → 채팅에서 **모델이 처분 예정일을 되묻고**(지어내지 않음) `generate_disposal_document` → `DEC-0001` draft 「우회 없이는 서명 불가」 → A2A 정산(`lien_released: true`) → **사전판정 재실행 `CONDITIONAL` HTTP 200, 차단 0건** → 🔴 **`DEC-0001`은 여전히 `draft`** |
+
+**⚠️ 03의 `evidence` 값은 `"수퍼비즈니스보험 삼성화재 — business_site 1"`이다** — 정책 레코드
+요약 문자열이지 약관 조항 인용이 아니다(InsuQ TASK-H08 미해결). **화면에서 "약관 근거"로
+소개하면 안 된다.** §②2.3의 경고가 실제 데모 데이터로 확인된 것이다.
+
+**04가 이 세트의 핵심이다.** 나머지는 전부 "물어보고 답을 받는" 모양인데 04만 **상대의 답이
+내 시스템의 상태를 바꾼다**(처분 차단 해소). 그러면서도 **서명은 사람이 한다**는 것이 같은
+화면에서 함께 증명된다.
+
+#### 구 캡처 (v1.4, 2026-08-24 — 위 재촬영본으로 대체됨)
+
+| 파일 | 시나리오 |
+|---|---|
+| `maintq-finallq-withdrawal-success.gif` | S5 request-withdrawal (실측 `CHAIN-PO-0122-b66672d7 · ok`) |
+| `maintq-insuq-lookup-clause-success.gif` | lookup-clause (실측 9.7초, 근거 8건) — ⚠️ 당시는 InsuQ 포크 어댑터(`:9102`) 경유. 지금은 Spring(`:8081`)이다(§②2.1) |
+| `maintq-finallq-insuq-loan-success.gif` | S8 assess-loan (5억 신청 → `decision: conditional` 보장 부족 케이스) — 재촬영본(03)은 5천만 신청 → `approved` 케이스라 **판정이 다르다.** 조건부 승인 장면이 필요하면 이 구 캡처를 쓴다 |
 
 ### 직원(심사역)용 승인 화면 — 상대방 시스템에서 요청이 뜨는 곳
 
